@@ -7,9 +7,9 @@ Experiment code for two blog posts investigating the combinatorial geometry of t
 
 ## What this is about
 
-A single-hidden-layer ReLU network with weight matrix $W$ and bias vector $b$ defines a hyperplane arrangement in input space. The combinatorial structure of that arrangement — which subsets of hyperplanes can meet at a point — is captured by an [affine matroid](https://en.wikipedia.org/wiki/Matroid).
+A single-hidden-layer ReLU network with weight matrix $W$ and bias vector $b$ defines a hyperplane arrangement in input space. The combinatorial structure of that arrangement — which subsets of hyperplanes can meet at a point — is captured by an affine matroid.
 
-[Positroids](https://en.wikipedia.org/wiki/Positroid) are a special class of matroids arising from totally nonnegative matrices. They have rich structure (Grassmann necklaces, decorated permutations, plabic graphs) and show up throughout algebraic combinatorics.
+Positroids are a special class of matroids arising from totally nonnegative matrices. They have rich structure (Grassmann necklaces, decorated permutations, plabic graphs) and show up throughout algebraic combinatorics.
 
 **Key finding:** When ReLU networks are trained by gradient descent, the affine matroid of the first layer is *always* a positroid in our experiments (800+ trials across multiple datasets and architectures, 100% positroid rate). This holds even for unconstrained weights — training itself appears to impose positroid structure.
 
