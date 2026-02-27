@@ -18,7 +18,8 @@ _cache: dict[tuple[int, int, int], tuple[np.ndarray, np.ndarray]] = {}
 
 
 def _pca_project(
-    x: np.ndarray, n_components: int,
+    x: np.ndarray,
+    n_components: int,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Center data and project onto top PCA components via SVD.
 
@@ -33,7 +34,9 @@ def _pca_project(
 
 
 def _load_and_project(
-    digit_a: int, digit_b: int, pca_dim: int,
+    digit_a: int,
+    digit_b: int,
+    pca_dim: int,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Load digits, filter to two classes, PCA-project, standardize, and cache.
 
@@ -94,12 +97,17 @@ def _dataset_name(digit_a: int, digit_b: int, pca_dim: int) -> str:
 
 
 def register_digits_dataset(
-    digit_a: int, digit_b: int, pca_dim: int,
+    digit_a: int,
+    digit_b: int,
+    pca_dim: int,
 ) -> str:
     """Register a digit dataset configuration and return its registry name."""
     name = _dataset_name(digit_a, digit_b, pca_dim)
     DIGIT_DATASETS[name] = partial(
-        make_digits, digit_a=digit_a, digit_b=digit_b, pca_dim=pca_dim,
+        make_digits,
+        digit_a=digit_a,
+        digit_b=digit_b,
+        pca_dim=pca_dim,
     )
     return name
 

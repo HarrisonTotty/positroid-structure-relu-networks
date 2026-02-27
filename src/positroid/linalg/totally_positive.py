@@ -55,9 +55,7 @@ def tp_from_cauchy_kernel(a: np.ndarray, b: np.ndarray) -> np.ndarray:
     return result
 
 
-def random_totally_positive(
-    m: int, n: int, rng: np.random.Generator | None = None
-) -> np.ndarray:
+def random_totally_positive(m: int, n: int, rng: np.random.Generator | None = None) -> np.ndarray:
     """Generate a random totally positive m x n matrix.
 
     Uses the exponential kernel with random strictly increasing parameters.

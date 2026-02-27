@@ -10,9 +10,7 @@ from itertools import combinations
 class Matroid:
     """A matroid on a finite ground set, represented by its collection of bases."""
 
-    def __init__(
-        self, ground_set: frozenset[int], bases: frozenset[frozenset[int]]
-    ) -> None:
+    def __init__(self, ground_set: frozenset[int], bases: frozenset[frozenset[int]]) -> None:
         if not bases:
             raise ValueError("Bases collection must be non-empty")
 
@@ -97,9 +95,7 @@ class Matroid:
                 fs = frozenset(subset)
                 if not self.is_independent(fs):
                     # Check minimality: all proper subsets must be independent
-                    is_circuit = all(
-                        self.is_independent(fs - {x}) for x in fs
-                    )
+                    is_circuit = all(self.is_independent(fs - {x}) for x in fs)
                     if is_circuit:
                         result.add(fs)
         return frozenset(result)
@@ -124,10 +120,7 @@ class Matroid:
         return hash((self._ground_set, self._bases))
 
     def __repr__(self) -> str:
-        return (
-            f"Matroid(n={self.size}, r={self._rank}, "
-            f"|bases|={len(self._bases)})"
-        )
+        return f"Matroid(n={self.size}, r={self._rank}, |bases|={len(self._bases)})"
 
 
 def uniform_matroid(k: int, n: int) -> Matroid:

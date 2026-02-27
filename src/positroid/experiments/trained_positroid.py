@@ -68,33 +68,29 @@ class TrainedExperimentResult:
     def tp_positroid_rate(self) -> float:
         if not self.tp_trials:
             return 0.0
-        return sum(
-            t.affine_matroid_is_positroid for t in self.tp_trials
-        ) / len(self.tp_trials)
+        return sum(t.affine_matroid_is_positroid for t in self.tp_trials) / len(self.tp_trials)
 
     @property
     def unconstrained_positroid_rate(self) -> float:
         if not self.unconstrained_trials:
             return 0.0
-        return sum(
-            t.affine_matroid_is_positroid for t in self.unconstrained_trials
-        ) / len(self.unconstrained_trials)
+        return sum(t.affine_matroid_is_positroid for t in self.unconstrained_trials) / len(
+            self.unconstrained_trials
+        )
 
     @property
     def tp_uniform_rate(self) -> float:
         if not self.tp_trials:
             return 0.0
-        return sum(
-            t.affine_matroid_is_uniform for t in self.tp_trials
-        ) / len(self.tp_trials)
+        return sum(t.affine_matroid_is_uniform for t in self.tp_trials) / len(self.tp_trials)
 
     @property
     def unconstrained_uniform_rate(self) -> float:
         if not self.unconstrained_trials:
             return 0.0
-        return sum(
-            t.affine_matroid_is_uniform for t in self.unconstrained_trials
-        ) / len(self.unconstrained_trials)
+        return sum(t.affine_matroid_is_uniform for t in self.unconstrained_trials) / len(
+            self.unconstrained_trials
+        )
 
 
 def analyze_network(
@@ -217,7 +213,11 @@ def run_experiment(
             seed=trial_seed + 1000,
         )
         tp_trial = run_single_trial(
-            dataset_name, x, y, tp_config, snapshot_epochs,
+            dataset_name,
+            x,
+            y,
+            tp_config,
+            snapshot_epochs,
         )
         result.tp_trials.append(tp_trial)
 
@@ -230,7 +230,11 @@ def run_experiment(
             seed=trial_seed + 2000,
         )
         uc_trial = run_single_trial(
-            dataset_name, x, y, uc_config, snapshot_epochs,
+            dataset_name,
+            x,
+            y,
+            uc_config,
+            snapshot_epochs,
         )
         result.unconstrained_trials.append(uc_trial)
 
@@ -251,11 +255,7 @@ def print_results(results: list[TrainedExperimentResult]) -> None:
     print("-" * 95)
 
     for r in results:
-        tp_acc = (
-            np.mean([t.final_accuracy for t in r.tp_trials])
-            if r.tp_trials
-            else 0.0
-        )
+        tp_acc = np.mean([t.final_accuracy for t in r.tp_trials]) if r.tp_trials else 0.0
         uc_acc = (
             np.mean([t.final_accuracy for t in r.unconstrained_trials])
             if r.unconstrained_trials
@@ -294,10 +294,7 @@ def print_detailed_results(results: list[TrainedExperimentResult]) -> None:
         for label, trials in [("TP", r.tp_trials), ("UC", r.unconstrained_trials)]:
             for i, t in enumerate(trials):
                 if not t.affine_matroid_is_uniform or not t.affine_matroid_is_positroid:
-                    print(
-                        f"\n--- {r.dataset_name} H={t.hidden_dim} "
-                        f"{label} trial {i} ---"
-                    )
+                    print(f"\n--- {r.dataset_name} H={t.hidden_dim} {label} trial {i} ---")
                     print(f"  Accuracy: {t.final_accuracy:.1%}")
                     print(f"  Loss: {t.final_loss:.4f}")
                     print(f"  Weight TP: {t.is_weight_tp}")
@@ -309,31 +306,21 @@ def print_detailed_results(results: list[TrainedExperimentResult]) -> None:
                     )
                     print(f"  Circuits: {t.affine_matroid_num_circuits}")
                     if t.affine_decorated_permutation is not None:
-                        print(
-                            f"  Decorated perm: "
-                            f"{t.affine_decorated_permutation}"
-                        )
+                        print(f"  Decorated perm: {t.affine_decorated_permutation}")
                     if t.matroid_evolution:
                         print("  Evolution:")
                         for epoch, unif, pos in t.matroid_evolution:
-                            print(
-                                f"    epoch {epoch:>4}: "
-                                f"uniform={unif}, positroid={pos}"
-                            )
+                            print(f"    epoch {epoch:>4}: uniform={unif}, positroid={pos}")
 
     # Check if all were trivial
     all_uniform = all(
-        t.affine_matroid_is_uniform
-        for r in results
-        for t in r.tp_trials + r.unconstrained_trials
+        t.affine_matroid_is_uniform for r in results for t in r.tp_trials + r.unconstrained_trials
     )
     if all_uniform:
         print("\n  All affine matroids were uniform (trivially positroids).")
 
     all_positroid = all(
-        t.affine_matroid_is_positroid
-        for r in results
-        for t in r.tp_trials + r.unconstrained_trials
+        t.affine_matroid_is_positroid for r in results for t in r.tp_trials + r.unconstrained_trials
     )
     if all_positroid and not all_uniform:
         print("\n  All affine matroids were positroids!")
@@ -344,11 +331,16 @@ def main() -> None:
         description="Trained Network Positroid Test",
     )
     parser.add_argument(
-        "--datasets", nargs="+", default=["moons", "circles"],
+        "--datasets",
+        nargs="+",
+        default=["moons", "circles"],
         choices=list(DATASETS.keys()),
     )
     parser.add_argument(
-        "--hidden-dims", type=int, nargs="+", default=[6, 8, 10],
+        "--hidden-dims",
+        type=int,
+        nargs="+",
+        default=[6, 8, 10],
     )
     parser.add_argument("--num-trials", type=int, default=20)
     parser.add_argument("--n-samples", type=int, default=200)
@@ -358,7 +350,8 @@ def main() -> None:
     parser.add_argument("--track-evolution", action="store_true")
     parser.add_argument("--detailed", action="store_true")
     parser.add_argument(
-        "--tp-kernel", default="exponential",
+        "--tp-kernel",
+        default="exponential",
         choices=["exponential", "cauchy"],
     )
     args = parser.parse_args()
@@ -381,10 +374,7 @@ def main() -> None:
             )
             tp_pos = result.tp_positroid_rate
             uc_pos = result.unconstrained_positroid_rate
-            print(
-                f"  TP positroid: {tp_pos:.1%}, "
-                f"UC positroid: {uc_pos:.1%}"
-            )
+            print(f"  TP positroid: {tp_pos:.1%}, UC positroid: {uc_pos:.1%}")
             all_results.append(result)
 
     print_results(all_results)

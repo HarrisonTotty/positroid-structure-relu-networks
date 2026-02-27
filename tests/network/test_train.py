@@ -112,14 +112,16 @@ class TestBackwardPass:
                 w1m = w1.copy()
                 w1m[i, j] -= eps
                 loss_p = binary_cross_entropy(
-                    forward_pass(x, w1p, b1, w2, b2)[0], y_true,
+                    forward_pass(x, w1p, b1, w2, b2)[0],
+                    y_true,
                 )
                 loss_m = binary_cross_entropy(
-                    forward_pass(x, w1m, b1, w2, b2)[0], y_true,
+                    forward_pass(x, w1m, b1, w2, b2)[0],
+                    y_true,
                 )
                 numerical = (loss_p - loss_m) / (2 * eps)
                 assert dw1[i, j] == pytest.approx(numerical, abs=1e-4), (
-                    f"dW1[{i},{j}]: analytical={dw1[i,j]:.6f}, numerical={numerical:.6f}"
+                    f"dW1[{i},{j}]: analytical={dw1[i, j]:.6f}, numerical={numerical:.6f}"
                 )
 
     def test_gradient_check_w2(self):
@@ -142,10 +144,12 @@ class TestBackwardPass:
             w2m = w2.copy()
             w2m[0, j] -= eps
             loss_p = binary_cross_entropy(
-                forward_pass(x, w1, b1, w2p, b2)[0], y_true,
+                forward_pass(x, w1, b1, w2p, b2)[0],
+                y_true,
             )
             loss_m = binary_cross_entropy(
-                forward_pass(x, w1, b1, w2m, b2)[0], y_true,
+                forward_pass(x, w1, b1, w2m, b2)[0],
+                y_true,
             )
             numerical = (loss_p - loss_m) / (2 * eps)
             assert dw2[0, j] == pytest.approx(numerical, abs=1e-4)
@@ -210,12 +214,14 @@ class TestCauchyConstrainedParams:
             params.a_raw[k] = orig + eps
             w1p, b1p, w2p, b2p = params.weights()
             loss_p = binary_cross_entropy(
-                forward_pass(x, w1p, b1p, w2p, b2p)[0], y_true,
+                forward_pass(x, w1p, b1p, w2p, b2p)[0],
+                y_true,
             )
             params.a_raw[k] = orig - eps
             w1m, b1m, w2m, b2m = params.weights()
             loss_m = binary_cross_entropy(
-                forward_pass(x, w1m, b1m, w2m, b2m)[0], y_true,
+                forward_pass(x, w1m, b1m, w2m, b2m)[0],
+                y_true,
             )
             params.a_raw[k] = orig
             numerical = (loss_p - loss_m) / (2 * eps)
@@ -250,8 +256,11 @@ class TestTrain:
     def test_tp_constrained_trains(self):
         x, y = make_moons(n_samples=100, rng=np.random.default_rng(42))
         config = TrainConfig(
-            hidden_dim=8, epochs=50, learning_rate=0.1,
-            tp_constrained=True, seed=42,
+            hidden_dim=8,
+            epochs=50,
+            learning_rate=0.1,
+            tp_constrained=True,
+            seed=42,
         )
         net, history = train(x, y, config)
         assert len(history.losses) == 50
@@ -277,8 +286,12 @@ class TestTrain:
     def test_cauchy_constrained_trains(self):
         x, y = make_moons(n_samples=100, rng=np.random.default_rng(42))
         config = TrainConfig(
-            hidden_dim=8, epochs=50, learning_rate=0.1,
-            tp_constrained=True, tp_kernel="cauchy", seed=42,
+            hidden_dim=8,
+            epochs=50,
+            learning_rate=0.1,
+            tp_constrained=True,
+            tp_kernel="cauchy",
+            seed=42,
         )
         net, history = train(x, y, config)
         assert len(history.losses) == 50
@@ -287,8 +300,11 @@ class TestTrain:
     def test_sgd_optimizer(self):
         x, y = make_moons(n_samples=100, rng=np.random.default_rng(42))
         config = TrainConfig(
-            hidden_dim=6, epochs=30, learning_rate=0.5,
-            optimizer="sgd", seed=42,
+            hidden_dim=6,
+            epochs=30,
+            learning_rate=0.5,
+            optimizer="sgd",
+            seed=42,
         )
         _, history = train(x, y, config)
         assert history.losses[-1] < history.losses[0]

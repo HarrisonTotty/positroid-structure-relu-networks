@@ -96,9 +96,7 @@ class ReluNetwork:
         earlier layers. Currently only supports layer_idx=0.
         """
         if layer_idx != 0:
-            raise NotImplementedError(
-                "Bent hyperplanes for deeper layers not yet implemented"
-            )
+            raise NotImplementedError("Bent hyperplanes for deeper layers not yet implemented")
 
         layer = self._layers[0]
         hyperplanes = [

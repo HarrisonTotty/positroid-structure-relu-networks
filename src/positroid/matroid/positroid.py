@@ -16,9 +16,7 @@ def _cyclic_order(start: int, n: int) -> list[int]:
     return [(start + i) % n for i in range(n)]
 
 
-def _lex_compare_cyclic(
-    a: frozenset[int], b: frozenset[int], order: list[int]
-) -> int:
+def _lex_compare_cyclic(a: frozenset[int], b: frozenset[int], order: list[int]) -> int:
     """Compare two sets lexicographically in the given cyclic order.
 
     Returns -1 if a < b, 0 if a == b, 1 if a > b.
@@ -149,16 +147,12 @@ def has_only_cyclic_interval_nonbases(matroid: Matroid) -> bool:
     """
     n = matroid.size
     k = matroid.rank
-    all_k_subsets = frozenset(
-        frozenset(s) for s in combinations(range(n), k)
-    )
+    all_k_subsets = frozenset(frozenset(s) for s in combinations(range(n), k))
     non_bases = all_k_subsets - matroid.bases
     return all(is_cyclic_interval(nb, n) for nb in non_bases)
 
 
-def decorated_permutation(
-    necklace: tuple[frozenset[int], ...], n: int
-) -> list[int | None]:
+def decorated_permutation(necklace: tuple[frozenset[int], ...], n: int) -> list[int | None]:
     """Compute the decorated permutation from a Grassmann necklace.
 
     For j = 0, ..., n-1:

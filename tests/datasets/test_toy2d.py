@@ -35,7 +35,10 @@ class TestMakeCircles:
 
     def test_radial_separation(self):
         pts, y = make_circles(
-            n_samples=200, noise=0.0, factor=0.3, rng=np.random.default_rng(42),
+            n_samples=200,
+            noise=0.0,
+            factor=0.3,
+            rng=np.random.default_rng(42),
         )
         radii = np.sqrt(pts[:, 0] ** 2 + pts[:, 1] ** 2)
         assert np.mean(radii[y == 1]) < np.mean(radii[y == 0])

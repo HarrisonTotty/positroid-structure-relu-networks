@@ -53,46 +53,67 @@ class TestLoadAndProject:
 class TestMakeDigits:
     def test_shape(self):
         x, y = make_digits(
-            n_samples=100, rng=np.random.default_rng(42),
-            digit_a=0, digit_b=1, pca_dim=5,
+            n_samples=100,
+            rng=np.random.default_rng(42),
+            digit_a=0,
+            digit_b=1,
+            pca_dim=5,
         )
         assert x.shape == (100, 5)
         assert y.shape == (100,)
 
     def test_labels_binary(self):
         _, y = make_digits(
-            n_samples=100, rng=np.random.default_rng(42),
-            digit_a=3, digit_b=8, pca_dim=10,
+            n_samples=100,
+            rng=np.random.default_rng(42),
+            digit_a=3,
+            digit_b=8,
+            pca_dim=10,
         )
         assert set(np.unique(y)).issubset({0.0, 1.0})
 
     def test_reproducibility(self):
         x1, y1 = make_digits(
-            n_samples=100, rng=np.random.default_rng(42),
-            digit_a=0, digit_b=1, pca_dim=5,
+            n_samples=100,
+            rng=np.random.default_rng(42),
+            digit_a=0,
+            digit_b=1,
+            pca_dim=5,
         )
         x2, y2 = make_digits(
-            n_samples=100, rng=np.random.default_rng(42),
-            digit_a=0, digit_b=1, pca_dim=5,
+            n_samples=100,
+            rng=np.random.default_rng(42),
+            digit_a=0,
+            digit_b=1,
+            pca_dim=5,
         )
         np.testing.assert_array_equal(x1, x2)
         np.testing.assert_array_equal(y1, y2)
 
     def test_different_seeds_differ(self):
         x1, _ = make_digits(
-            n_samples=100, rng=np.random.default_rng(42),
-            digit_a=0, digit_b=1, pca_dim=5,
+            n_samples=100,
+            rng=np.random.default_rng(42),
+            digit_a=0,
+            digit_b=1,
+            pca_dim=5,
         )
         x2, _ = make_digits(
-            n_samples=100, rng=np.random.default_rng(99),
-            digit_a=0, digit_b=1, pca_dim=5,
+            n_samples=100,
+            rng=np.random.default_rng(99),
+            digit_a=0,
+            digit_b=1,
+            pca_dim=5,
         )
         assert not np.array_equal(x1, x2)
 
     def test_oversampling(self):
         x, y = make_digits(
-            n_samples=1000, rng=np.random.default_rng(42),
-            digit_a=0, digit_b=1, pca_dim=5,
+            n_samples=1000,
+            rng=np.random.default_rng(42),
+            digit_a=0,
+            digit_b=1,
+            pca_dim=5,
         )
         assert x.shape == (1000, 5)
         assert y.shape == (1000,)
@@ -101,8 +122,10 @@ class TestMakeDigits:
 class TestRegistry:
     def test_default_datasets_registered(self):
         for name in [
-            "digits_0v1_pca5", "digits_0v1_pca10",
-            "digits_3v8_pca5", "digits_3v8_pca10",
+            "digits_0v1_pca5",
+            "digits_0v1_pca10",
+            "digits_3v8_pca5",
+            "digits_3v8_pca10",
         ]:
             assert name in DIGIT_DATASETS
 
@@ -127,8 +150,11 @@ class TestTrainingIntegration:
         from positroid.network.train import TrainConfig, train
 
         x, y = make_digits(
-            n_samples=100, rng=np.random.default_rng(42),
-            digit_a=0, digit_b=1, pca_dim=5,
+            n_samples=100,
+            rng=np.random.default_rng(42),
+            digit_a=0,
+            digit_b=1,
+            pca_dim=5,
         )
         config = TrainConfig(hidden_dim=8, epochs=20, seed=42)
         net, history = train(x, y, config)
@@ -141,11 +167,17 @@ class TestTrainingIntegration:
         from positroid.network.train import TrainConfig, train
 
         x, y = make_digits(
-            n_samples=100, rng=np.random.default_rng(42),
-            digit_a=0, digit_b=1, pca_dim=5,
+            n_samples=100,
+            rng=np.random.default_rng(42),
+            digit_a=0,
+            digit_b=1,
+            pca_dim=5,
         )
         config = TrainConfig(
-            hidden_dim=8, epochs=20, tp_constrained=True, seed=42,
+            hidden_dim=8,
+            epochs=20,
+            tp_constrained=True,
+            seed=42,
         )
         net, history = train(x, y, config)
         assert net.input_dim == 5

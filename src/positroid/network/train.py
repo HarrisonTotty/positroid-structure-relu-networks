@@ -31,7 +31,9 @@ def sigmoid(z: np.ndarray) -> np.ndarray:
 
 
 def binary_cross_entropy(
-    y_pred: np.ndarray, y_true: np.ndarray, eps: float = 1e-12,
+    y_pred: np.ndarray,
+    y_true: np.ndarray,
+    eps: float = 1e-12,
 ) -> float:
     """Mean binary cross-entropy loss."""
     p = np.clip(y_pred.ravel(), eps, 1 - eps)
@@ -144,7 +146,10 @@ class UnconstrainedParams:
     """Standard unconstrained parameters: W1, b1, W2, b2."""
 
     def __init__(
-        self, input_dim: int, hidden_dim: int, rng: np.random.Generator,
+        self,
+        input_dim: int,
+        hidden_dim: int,
+        rng: np.random.Generator,
     ) -> None:
         scale1 = np.sqrt(2.0 / input_dim)
         self.w1 = rng.normal(0, scale1, (hidden_dim, input_dim))
@@ -162,10 +167,12 @@ class UnconstrainedParams:
         return [self.w1, self.b1, self.w2, self.b2]
 
     def to_relu_network(self) -> ReluNetwork:
-        return ReluNetwork([
-            ReluLayer(self.w1.copy(), self.b1.copy()),
-            ReluLayer(self.w2.copy(), self.b2.copy()),
-        ])
+        return ReluNetwork(
+            [
+                ReluLayer(self.w1.copy(), self.b1.copy()),
+                ReluLayer(self.w2.copy(), self.b2.copy()),
+            ]
+        )
 
     def compute_grads(
         self,
@@ -177,7 +184,12 @@ class UnconstrainedParams:
     ) -> list[np.ndarray]:
         """Compute gradients for all parameters."""
         dw1, db1, dw2, db2 = backward_pass(
-            x, y_true, y_pred, z1_pre, z1_post, self.w2,
+            x,
+            y_true,
+            y_pred,
+            z1_pre,
+            z1_post,
+            self.w2,
         )
         return [dw1, db1, dw2, db2]
 
@@ -190,17 +202,24 @@ class TPConstrainedParams:
     """
 
     def __init__(
-        self, input_dim: int, hidden_dim: int, rng: np.random.Generator,
+        self,
+        input_dim: int,
+        hidden_dim: int,
+        rng: np.random.Generator,
     ) -> None:
         # Initialize so that sorted params land in [0.5, 2.5] range
-        self.a_raw = np.concatenate([
-            [rng.uniform(0.5, 1.0)],
-            rng.uniform(0.2, 0.5, size=hidden_dim - 1),
-        ])
-        self.b_raw = np.concatenate([
-            [rng.uniform(0.5, 1.0)],
-            rng.uniform(0.2, 0.5, size=input_dim - 1),
-        ])
+        self.a_raw = np.concatenate(
+            [
+                [rng.uniform(0.5, 1.0)],
+                rng.uniform(0.2, 0.5, size=hidden_dim - 1),
+            ]
+        )
+        self.b_raw = np.concatenate(
+            [
+                [rng.uniform(0.5, 1.0)],
+                rng.uniform(0.2, 0.5, size=input_dim - 1),
+            ]
+        )
         self.b1 = np.zeros(hidden_dim)
         scale2 = np.sqrt(2.0 / hidden_dim)
         self.w2 = rng.normal(0, scale2, (1, hidden_dim))
@@ -225,10 +244,12 @@ class TPConstrainedParams:
 
     def to_relu_network(self) -> ReluNetwork:
         w1 = self.weight_matrix()
-        return ReluNetwork([
-            ReluLayer(w1.copy(), self.b1.copy()),
-            ReluLayer(self.w2.copy(), self.b2.copy()),
-        ])
+        return ReluNetwork(
+            [
+                ReluLayer(w1.copy(), self.b1.copy()),
+                ReluLayer(self.w2.copy(), self.b2.copy()),
+            ]
+        )
 
     def compute_grads(
         self,
@@ -250,7 +271,12 @@ class TPConstrainedParams:
 
         # Standard backward pass to get dL/dW1
         dw1, db1, dw2, db2 = backward_pass(
-            x, y_true, y_pred, z1_pre, z1_post, self.w2,
+            x,
+            y_true,
+            y_pred,
+            z1_pre,
+            z1_post,
+            self.w2,
         )
 
         # Chain through exponential kernel
@@ -286,17 +312,24 @@ class CauchyConstrainedParams:
     """
 
     def __init__(
-        self, input_dim: int, hidden_dim: int, rng: np.random.Generator,
+        self,
+        input_dim: int,
+        hidden_dim: int,
+        rng: np.random.Generator,
     ) -> None:
         # Initialize so that sorted params land in positive range [1, ~4]
-        self.a_raw = np.concatenate([
-            [rng.uniform(1.0, 2.0)],
-            rng.uniform(0.3, 0.8, size=hidden_dim - 1),
-        ])
-        self.b_raw = np.concatenate([
-            [rng.uniform(1.0, 2.0)],
-            rng.uniform(0.3, 0.8, size=input_dim - 1),
-        ])
+        self.a_raw = np.concatenate(
+            [
+                [rng.uniform(1.0, 2.0)],
+                rng.uniform(0.3, 0.8, size=hidden_dim - 1),
+            ]
+        )
+        self.b_raw = np.concatenate(
+            [
+                [rng.uniform(1.0, 2.0)],
+                rng.uniform(0.3, 0.8, size=input_dim - 1),
+            ]
+        )
         self.b1 = np.zeros(hidden_dim)
         scale2 = np.sqrt(2.0 / hidden_dim)
         self.w2 = rng.normal(0, scale2, (1, hidden_dim))
@@ -322,10 +355,12 @@ class CauchyConstrainedParams:
 
     def to_relu_network(self) -> ReluNetwork:
         w1 = self.weight_matrix()
-        return ReluNetwork([
-            ReluLayer(w1.copy(), self.b1.copy()),
-            ReluLayer(self.w2.copy(), self.b2.copy()),
-        ])
+        return ReluNetwork(
+            [
+                ReluLayer(w1.copy(), self.b1.copy()),
+                ReluLayer(self.w2.copy(), self.b2.copy()),
+            ]
+        )
 
     def compute_grads(
         self,
@@ -347,7 +382,12 @@ class CauchyConstrainedParams:
         w1 = 1.0 / (a[:, np.newaxis] + b[np.newaxis, :])
 
         dw1, db1, dw2, db2 = backward_pass(
-            x, y_true, y_pred, z1_pre, z1_post, self.w2,
+            x,
+            y_true,
+            y_pred,
+            z1_pre,
+            z1_post,
+            self.w2,
         )
 
         # Chain through Cauchy kernel: dW1/da_i = dW1/db_j = -W1^2
@@ -444,17 +484,18 @@ def train(
             tp_params = CauchyConstrainedParams(input_dim, config.hidden_dim, rng)
         else:
             tp_params = TPConstrainedParams(input_dim, config.hidden_dim, rng)
-        params: UnconstrainedParams | TPConstrainedParams | CauchyConstrainedParams = (
-            tp_params
-        )
+        params: UnconstrainedParams | TPConstrainedParams | CauchyConstrainedParams = tp_params
     else:
         params = UnconstrainedParams(input_dim, config.hidden_dim, rng)
 
     # Create optimizer
     if config.optimizer == "adam":
         opt: SGD | Adam = Adam(
-            params.param_list(), config.learning_rate,
-            config.beta1, config.beta2, config.adam_eps,
+            params.param_list(),
+            config.learning_rate,
+            config.beta1,
+            config.beta2,
+            config.adam_eps,
         )
     else:
         opt = SGD(params.param_list(), config.learning_rate)

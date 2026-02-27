@@ -64,13 +64,15 @@ class TestIsPositroid:
         positroid of rank 2 on [4] realized by the matrix
         [[1, 0, 1, 1], [0, 0, 1, 1]] (with columns 0,1 parallel).
         """
-        bases = frozenset([
-            frozenset({0, 2}),
-            frozenset({0, 3}),
-            frozenset({1, 2}),
-            frozenset({1, 3}),
-            frozenset({2, 3}),
-        ])
+        bases = frozenset(
+            [
+                frozenset({0, 2}),
+                frozenset({0, 3}),
+                frozenset({1, 2}),
+                frozenset({1, 3}),
+                frozenset({2, 3}),
+            ]
+        )
         m = Matroid(frozenset({0, 1, 2, 3}), bases)
         assert is_positroid(m)
 
@@ -80,12 +82,14 @@ class TestIsPositroid:
         Missing {0,1} and {2,3}. The parallel pairs are adjacent in
         cyclic order, so this IS realizable in Gr_+(2,4).
         """
-        bases = frozenset([
-            frozenset({0, 2}),
-            frozenset({0, 3}),
-            frozenset({1, 2}),
-            frozenset({1, 3}),
-        ])
+        bases = frozenset(
+            [
+                frozenset({0, 2}),
+                frozenset({0, 3}),
+                frozenset({1, 2}),
+                frozenset({1, 3}),
+            ]
+        )
         m = Matroid(frozenset({0, 1, 2, 3}), bases)
         assert is_positroid(m)
 
@@ -96,12 +100,14 @@ class TestIsPositroid:
         The dependent pairs (0,2) and (1,3) are interleaved in the cyclic
         order 0,1,2,3, so no totally nonneg realization exists.
         """
-        bases = frozenset([
-            frozenset({0, 1}),
-            frozenset({0, 3}),
-            frozenset({1, 2}),
-            frozenset({2, 3}),
-        ])
+        bases = frozenset(
+            [
+                frozenset({0, 1}),
+                frozenset({0, 3}),
+                frozenset({1, 2}),
+                frozenset({2, 3}),
+            ]
+        )
         m = Matroid(frozenset({0, 1, 2, 3}), bases)
         assert not is_positroid(m)
 

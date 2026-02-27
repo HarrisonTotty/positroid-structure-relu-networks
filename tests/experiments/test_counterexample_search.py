@@ -308,8 +308,7 @@ class TestDichotomyClassification:
 
         for r in counterexamples:
             has_non_interval = any(
-                not is_cyclic_interval(frozenset(nb), r.hidden_dim)
-                for nb in r.non_bases
+                not is_cyclic_interval(frozenset(nb), r.hidden_dim) for nb in r.non_bases
             )
             assert has_non_interval, (
                 f"Counterexample d={r.input_dim}, H={r.hidden_dim} "
@@ -333,8 +332,7 @@ class TestDichotomyClassification:
         all_interval_count = 0
         for r in non_uniform:
             all_interval = all(
-                is_cyclic_interval(frozenset(nb), r.hidden_dim)
-                for nb in r.non_bases
+                is_cyclic_interval(frozenset(nb), r.hidden_dim) for nb in r.non_bases
             )
             if all_interval:
                 all_interval_count += 1

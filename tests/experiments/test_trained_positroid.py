@@ -16,7 +16,9 @@ class TestAnalyzeNetwork:
         net, history = train(x, y, config)
 
         result = analyze_network(
-            net, "moons", tp_constrained=False,
+            net,
+            "moons",
+            tp_constrained=False,
             final_loss=history.losses[-1],
             final_accuracy=history.accuracies[-1],
         )
@@ -27,12 +29,17 @@ class TestAnalyzeNetwork:
     def test_tp_constrained_result(self):
         x, y = make_moons(n_samples=100, rng=np.random.default_rng(42))
         config = TrainConfig(
-            hidden_dim=6, epochs=30, tp_constrained=True, seed=42,
+            hidden_dim=6,
+            epochs=30,
+            tp_constrained=True,
+            seed=42,
         )
         net, history = train(x, y, config)
 
         result = analyze_network(
-            net, "moons", tp_constrained=True,
+            net,
+            "moons",
+            tp_constrained=True,
             final_loss=history.losses[-1],
             final_accuracy=history.accuracies[-1],
         )

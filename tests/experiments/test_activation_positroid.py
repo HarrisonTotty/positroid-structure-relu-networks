@@ -26,16 +26,12 @@ class TestActivationPositroid:
         assert result.linear_positroid_count == 10
 
     def test_experiment_random(self):
-        result = run_experiment(
-            input_dim=2, hidden_dim=4, num_trials=10, tp_weights=False, seed=42
-        )
+        result = run_experiment(input_dim=2, hidden_dim=4, num_trials=10, tp_weights=False, seed=42)
         assert result.num_trials == 10
 
     def test_small_hidden_dim(self):
         """With H = n = 2, the matroid can be non-trivial."""
-        result = run_experiment(
-            input_dim=2, hidden_dim=2, num_trials=10, tp_weights=True, seed=42
-        )
+        result = run_experiment(input_dim=2, hidden_dim=2, num_trials=10, tp_weights=True, seed=42)
         assert len(result.trials) == 10
         # With H = n, the linear matroid has exactly 1 basis (the full set)
         for t in result.trials:

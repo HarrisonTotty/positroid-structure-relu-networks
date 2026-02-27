@@ -64,9 +64,7 @@ class TestIsCyclicInterval:
 
     def test_exhaustive_intervals_on_4(self):
         """All cyclic intervals of size 2 on [4]: exactly {0,1},{1,2},{2,3},{3,0}."""
-        intervals = [
-            s for s in combinations(range(4), 2) if is_cyclic_interval(s, 4)
-        ]
+        intervals = [s for s in combinations(range(4), 2) if is_cyclic_interval(s, 4)]
         # (3, 0) wraps — but combinations gives (0, 3)
         expected_fs = {frozenset(s) for s in [(0, 1), (1, 2), (2, 3), (0, 3)]}
         actual_fs = {frozenset(s) for s in intervals}
@@ -74,11 +72,7 @@ class TestIsCyclicInterval:
 
     def test_exhaustive_intervals_on_6_size_3(self):
         """All cyclic intervals of size 3 on [6]: exactly 6 of them."""
-        intervals = [
-            frozenset(s)
-            for s in combinations(range(6), 3)
-            if is_cyclic_interval(s, 6)
-        ]
+        intervals = [frozenset(s) for s in combinations(range(6), 3) if is_cyclic_interval(s, 6)]
         expected = {
             frozenset({0, 1, 2}),
             frozenset({1, 2, 3}),
@@ -110,33 +104,28 @@ class TestHasOnlyCyclicIntervalNonbases:
 
     def test_adjacent_parallel_true(self):
         """Remove {0,1} from U(2,4) — contiguous non-basis."""
-        bases = frozenset(
-            frozenset(s) for s in combinations(range(4), 2)
-        ) - {frozenset({0, 1})}
+        bases = frozenset(frozenset(s) for s in combinations(range(4), 2)) - {frozenset({0, 1})}
         m = Matroid(frozenset(range(4)), bases)
         assert has_only_cyclic_interval_nonbases(m)
 
     def test_interleaved_parallel_false(self):
         """Remove {0,2} from U(2,4) — non-contiguous non-basis."""
-        bases = frozenset(
-            frozenset(s) for s in combinations(range(4), 2)
-        ) - {frozenset({0, 2})}
+        bases = frozenset(frozenset(s) for s in combinations(range(4), 2)) - {frozenset({0, 2})}
         m = Matroid(frozenset(range(4)), bases)
         assert not has_only_cyclic_interval_nonbases(m)
 
     def test_spread_triple_false(self):
         """Remove {0,2,4} from U(3,6) — spread non-basis."""
-        bases = frozenset(
-            frozenset(s) for s in combinations(range(6), 3)
-        ) - {frozenset({0, 2, 4})}
+        bases = frozenset(frozenset(s) for s in combinations(range(6), 3)) - {frozenset({0, 2, 4})}
         m = Matroid(frozenset(range(6)), bases)
         assert not has_only_cyclic_interval_nonbases(m)
 
     def test_two_contiguous_nonbases(self):
         """Remove {0,1} and {2,3} from U(2,4) — both contiguous."""
-        bases = frozenset(
-            frozenset(s) for s in combinations(range(4), 2)
-        ) - {frozenset({0, 1}), frozenset({2, 3})}
+        bases = frozenset(frozenset(s) for s in combinations(range(4), 2)) - {
+            frozenset({0, 1}),
+            frozenset({2, 3}),
+        }
         m = Matroid(frozenset(range(4)), bases)
         assert has_only_cyclic_interval_nonbases(m)
 
@@ -160,18 +149,14 @@ class TestContiguousImpliesPositroid:
 
         # Find all cyclic intervals of size k on [n]
         cyclic_intervals = [
-            frozenset(s)
-            for s in combinations(range(n), k)
-            if is_cyclic_interval(s, n)
+            frozenset(s) for s in combinations(range(n), k) if is_cyclic_interval(s, n)
         ]
 
         num_tested = 0
         # Enumerate all 2^|intervals| subsets of intervals to remove
         for mask in range(1, 1 << len(cyclic_intervals)):
             to_remove = frozenset(
-                cyclic_intervals[i]
-                for i in range(len(cyclic_intervals))
-                if mask & (1 << i)
+                cyclic_intervals[i] for i in range(len(cyclic_intervals)) if mask & (1 << i)
             )
             remaining = all_bases - to_remove
             if not remaining:
@@ -223,13 +208,11 @@ class TestSingleRemovalDichotomy:
 
             if is_cyclic_interval(s, n):
                 assert is_positroid(m), (
-                    f"Cyclic interval {s} removed from U({k},{n}) "
-                    f"should give positroid"
+                    f"Cyclic interval {s} removed from U({k},{n}) should give positroid"
                 )
             else:
                 assert not is_positroid(m), (
-                    f"Non-interval {s} removed from U({k},{n}) "
-                    f"should give non-positroid"
+                    f"Non-interval {s} removed from U({k},{n}) should give non-positroid"
                 )
 
 
@@ -255,17 +238,12 @@ class TestConnectionToCounterexamples:
 
         for n in range(4, 8):
             for k in range(2, min(n, 5)):
-                intervals = [
-                    s
-                    for s in combinations(range(n), k)
-                    if is_cyclic_interval(s, n)
-                ]
+                intervals = [s for s in combinations(range(n), k) if is_cyclic_interval(s, n)]
                 for i, c1 in enumerate(intervals):
                     for c2 in intervals[i + 1 :]:
                         if set(c1).isdisjoint(set(c2)):
                             assert not is_crossing_pair(c1, c2, n), (
-                                f"Disjoint cyclic intervals {c1} and {c2} "
-                                f"cross on [{n}]"
+                                f"Disjoint cyclic intervals {c1} and {c2} cross on [{n}]"
                             )
 
     def test_non_interval_pairs_can_cross(self):

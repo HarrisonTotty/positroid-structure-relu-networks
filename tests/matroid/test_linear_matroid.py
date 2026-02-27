@@ -15,12 +15,14 @@ class TestLinearMatroid:
 
     def test_parallel_vectors(self):
         """Two parallel vectors create a non-uniform matroid."""
-        vectors = np.array([
-            [1.0, 0.0],
-            [2.0, 0.0],  # parallel to first
-            [0.0, 1.0],
-            [1.0, 1.0],
-        ])
+        vectors = np.array(
+            [
+                [1.0, 0.0],
+                [2.0, 0.0],  # parallel to first
+                [0.0, 1.0],
+                [1.0, 1.0],
+            ]
+        )
         m = linear_matroid_from_vectors(vectors)
         assert m.rank == 2
         assert not m.is_independent(frozenset({0, 1}))  # parallel

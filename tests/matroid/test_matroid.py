@@ -62,13 +62,15 @@ class TestMatroid:
         Remove {0,1} from the bases of U(2,4). This means 0 and 1 are
         "parallel" (dependent pair).
         """
-        bases = frozenset([
-            frozenset({0, 2}),
-            frozenset({0, 3}),
-            frozenset({1, 2}),
-            frozenset({1, 3}),
-            frozenset({2, 3}),
-        ])
+        bases = frozenset(
+            [
+                frozenset({0, 2}),
+                frozenset({0, 3}),
+                frozenset({1, 2}),
+                frozenset({1, 3}),
+                frozenset({2, 3}),
+            ]
+        )
         m = Matroid(frozenset({0, 1, 2, 3}), bases)
         assert not m.is_uniform()
         assert m.rank == 2

@@ -94,9 +94,7 @@ def run_single_trial(
     b = rng.uniform(-1.0, 1.0, size=hidden_dim)
 
     # Build hyperplane arrangement
-    hyperplanes = [
-        Hyperplane(normal=w[i].copy(), bias=float(b[i])) for i in range(hidden_dim)
-    ]
+    hyperplanes = [Hyperplane(normal=w[i].copy(), bias=float(b[i])) for i in range(hidden_dim)]
     arr = HyperplaneArrangement(hyperplanes)
 
     # Linear matroid (normals only)
@@ -200,14 +198,18 @@ def print_detailed_results(results: list[ExperimentResult]) -> None:
                 found_any = True
                 print(f"\n--- Trial {i} (H={t.hidden_dim}, {r.weight_type}) ---")
                 print(f"  Weight TP: {t.is_weight_tp}")
-                print(f"  Linear matroid: rank={t.linear_matroid_rank}, "
-                      f"|bases|={t.linear_matroid_num_bases}, "
-                      f"uniform={t.linear_matroid_is_uniform}, "
-                      f"positroid={t.linear_matroid_is_positroid}")
-                print(f"  Affine matroid: rank={t.affine_matroid_rank}, "
-                      f"|bases|={t.affine_matroid_num_bases}, "
-                      f"uniform={t.affine_matroid_is_uniform}, "
-                      f"positroid={t.affine_matroid_is_positroid}")
+                print(
+                    f"  Linear matroid: rank={t.linear_matroid_rank}, "
+                    f"|bases|={t.linear_matroid_num_bases}, "
+                    f"uniform={t.linear_matroid_is_uniform}, "
+                    f"positroid={t.linear_matroid_is_positroid}"
+                )
+                print(
+                    f"  Affine matroid: rank={t.affine_matroid_rank}, "
+                    f"|bases|={t.affine_matroid_num_bases}, "
+                    f"uniform={t.affine_matroid_is_uniform}, "
+                    f"positroid={t.affine_matroid_is_positroid}"
+                )
 
     if not found_any:
         print("\n  All affine matroids were positroids!")
@@ -216,7 +218,10 @@ def print_detailed_results(results: list[ExperimentResult]) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Activation Positroid Test")
     parser.add_argument(
-        "--hidden-dims", type=int, nargs="+", default=[3, 4, 5, 6],
+        "--hidden-dims",
+        type=int,
+        nargs="+",
+        default=[3, 4, 5, 6],
         help="Hidden dimensions to test",
     )
     parser.add_argument("--input-dim", type=int, default=2, help="Input dimension")
@@ -230,14 +235,22 @@ def main() -> None:
     for h in args.hidden_dims:
         print(f"Running H={h}, TP weights...", end=" ", flush=True)
         tp_result = run_experiment(
-            args.input_dim, h, args.num_trials, tp_weights=True, seed=args.seed,
+            args.input_dim,
+            h,
+            args.num_trials,
+            tp_weights=True,
+            seed=args.seed,
         )
         print(f"done. Affine positroid rate: {tp_result.affine_positroid_rate:.1%}")
         all_results.append(tp_result)
 
         print(f"Running H={h}, random weights...", end=" ", flush=True)
         rand_result = run_experiment(
-            args.input_dim, h, args.num_trials, tp_weights=False, seed=args.seed + 1,
+            args.input_dim,
+            h,
+            args.num_trials,
+            tp_weights=False,
+            seed=args.seed + 1,
         )
         print(f"done. Affine positroid rate: {rand_result.affine_positroid_rate:.1%}")
         all_results.append(rand_result)
