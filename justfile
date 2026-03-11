@@ -51,3 +51,14 @@ experiment-trained-positroid-digits *ARGS:
 # Run counterexample search for the activation positroid conjecture
 experiment-counterexample *ARGS:
     uv run python -m positroid.experiments.counterexample_search {{ ARGS }}
+
+# Build paper 1 (positroid structure)
+paper1:
+    cd papers/1-positroid-structure && pdflatex -interaction=nonstopmode main.tex && pdflatex -interaction=nonstopmode main.tex
+
+# Build all papers
+papers: paper1
+
+# Clean paper build artifacts
+papers-clean:
+    cd papers/1-positroid-structure && rm -f main.aux main.log main.out main.bbl main.blg

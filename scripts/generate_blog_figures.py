@@ -282,7 +282,7 @@ def fig3_dichotomy() -> None:
     ax.set_xticklabels(categories, fontsize=11)
     ax.set_ylabel("number of matroids", fontsize=11)
     ax.set_title(
-        "2,793 TP network trials: non-basis structure vs positroid status",
+        "1,238 non-uniform matroids (from 2,793 trials): non-basis structure vs positroid status",
         fontsize=12, pad=15,
     )
     ax.legend(loc="upper left", fontsize=10, framealpha=0.5,

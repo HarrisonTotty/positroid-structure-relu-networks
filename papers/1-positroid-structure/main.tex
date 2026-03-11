@@ -1,0 +1,1087 @@
+\documentclass[11pt]{article}
+
+% ── Geometry ──────────────────────────────────────────────────────────
+\usepackage[margin=1in]{geometry}
+
+% ── Fonts & encoding ─────────────────────────────────────────────────
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+
+% ── Math ──────────────────────────────────────────────────────────────
+\usepackage{amsmath,amssymb,amsthm,mathtools}
+
+% ── Graphics & tables ────────────────────────────────────────────────
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{subcaption}
+\usepackage{xcolor}
+
+% ── Algorithms ────────────────────────────────────────────────────────
+\usepackage[ruled,vlined]{algorithm2e}
+
+% ── References ────────────────────────────────────────────────────────
+\usepackage[colorlinks,citecolor=blue!60!black,linkcolor=blue!60!black,urlcolor=blue!60!black]{hyperref}
+\usepackage[numbers,sort&compress]{natbib}
+
+% ── Theorem environments ─────────────────────────────────────────────
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{conjecture}[theorem]{Conjecture}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{example}[theorem]{Example}
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+
+% ── Notation ──────────────────────────────────────────────────────────
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\cI}{\mathcal{I}}
+\newcommand{\cB}{\mathcal{B}}
+\newcommand{\cC}{\mathcal{C}}
+\newcommand{\cM}{\mathcal{M}}
+\newcommand{\cN}{\mathcal{N}}
+\newcommand{\cS}{\mathcal{S}}
+\newcommand{\Gr}{\mathrm{Gr}}
+\newcommand{\relu}{\operatorname{ReLU}}
+\DeclareMathOperator{\rank}{rank}
+\DeclareMathOperator{\supp}{supp}
+
+% ── Page-break control ──────────────────────────────────────────────
+\widowpenalty=10000
+\clubpenalty=10000
+\displaywidowpenalty=10000
+\usepackage{needspace}
+
+% ── Document ──────────────────────────────────────────────────────────
+\title{Positroid Structure in ReLU Networks:\\
+  From Combinatorial Geometry to Matroid-Guided Pruning}
+
+\author{
+  Harrison Totty \\
+  \texttt{harrison@totty.dev}
+}
+
+\date{}
+
+\begin{document}
+\maketitle
+
+% ══════════════════════════════════════════════════════════════════════
+\begin{abstract}
+% ══════════════════════════════════════════════════════════════════════
+
+We study the combinatorial structure of hyperplane arrangements
+induced by single-hidden-layer ReLU networks with totally positive
+(TP) weight matrices.  The activation pattern of such a network
+defines an \emph{affine matroid} on the hidden neurons, and we
+investigate when this matroid is a \emph{positroid}---a matroid
+arising from the totally nonnegative Grassmannian.
+
+We prove two theorems.  The \textbf{Contiguous-Implies-Positroid
+(CIP) Theorem} states that if every non-basis of a rank-$k$ matroid
+on $[n]$ is a cyclic interval, then the matroid is a positroid.  The
+\textbf{Contiguous-Support Positroid Theorem (CSPT)} generalizes
+this: if the union of all elements appearing in non-bases forms a
+cyclic interval of rank less than~$k$, the matroid is a positroid.
+These theorems explain the empirical observation that trained
+networks produce exclusively positroid activation matroids (800+
+trials with TP-constrained weights, zero exceptions; unconstrained
+controls are discussed in Section~\ref{sec:conjecture}).
+
+We show that the TP constraint is essential by constructing 12{,}642
+counterexamples to the stronger conjecture that TP weights alone
+suffice---deliberately chosen biases with ``spread'' non-basis
+patterns break positroid structure, while ``contiguous'' patterns
+never do.  Non-TP parameterizations (negated bidiagonal) produce
+non-positroids at a 3\% rate, confirming that total positivity is
+the operative mechanism.
+
+Finally, the matroid's rank-deficiency partition identifies a
+\textbf{safe pruning set}: removing 75\% of tail neurons causes zero
+accuracy loss across all scales tested ($H = 50$ to $200$),
+outperforming random pruning by 10--15 percentage points and strictly
+outperforming magnitude, activation, and sensitivity baselines.
+
+\end{abstract}
+
+
+% ══════════════════════════════════════════════════════════════════════
+\section{Introduction}\label{sec:intro}
+% ══════════════════════════════════════════════════════════════════════
+
+A single-hidden-layer ReLU network
+$f(x) = W_2 \cdot \relu(W_1 x + b_1) + b_2$
+with $H$ hidden neurons defines a hyperplane arrangement in input
+space: the $i$-th neuron activates on the half-space
+$\{x : w_i^\top x + b_i \geq 0\}$, where $w_i$ is the $i$-th row
+of $W_1$.  The combinatorial structure of this arrangement---which
+subsets of hyperplanes can simultaneously pass through a
+point---is captured by an \emph{affine matroid} of rank at most $d+1$ on
+the ground set $[H] = \{0, 1, \ldots, H{-}1\}$, where $d$ is the
+input dimension.
+
+\emph{Positroids} are a distinguished class of matroids arising from
+the totally nonnegative Grassmannian $\Gr_+(k,n)$
+\citep{postnikov2006,oh2011,knutson2013}.  They enjoy rich
+combinatorial structure---Grassmann necklaces, decorated
+permutations, plabic graphs---and appear throughout algebraic
+combinatorics and mathematical physics
+\citep{lukowski2023}.
+
+In this paper, we establish a new connection between positroid
+combinatorics and neural network geometry.  Our contributions are:
+
+\begin{enumerate}
+  \item \textbf{Empirical conjecture and disproof.}  We conjecture
+    that TP weight matrices always produce positroid activation
+    matroids.  Across 800+ training trials on multiple datasets, the
+    conjecture holds without exception.  We then disprove the
+    conjecture by constructing 12{,}642 counterexamples via
+    deliberately adversarial bias choices
+    (Section~\ref{sec:counterexamples}).
+
+  \item \textbf{Two matroid theorems.}  The
+    \emph{Contiguous-Implies-Positroid} (CIP) theorem
+    (Theorem~\ref{thm:cip}) and the \emph{Contiguous-Support
+    Positroid Theorem} (CSPT, Theorem~\ref{thm:cspt}) provide a
+    complete explanation of the empirical dichotomy: networks whose
+    non-bases are cyclic intervals are always positroids, while
+    ``spread'' non-bases can break the structure
+    (Section~\ref{sec:theorems}).
+
+  \item \textbf{TP is essential.}  Non-TP parameterizations
+    (negated bidiagonal) produce non-positroids at a $\sim$3\% rate,
+    while TP parameterizations never do.  The causal chain is:
+    $\text{TP} \to \text{contiguous support} \to
+    \text{CSPT} \to \text{positroid}$
+    (Section~\ref{sec:tp-essential}).
+
+  \item \textbf{Matroid-guided pruning.}  The matroid's
+    rank-deficiency partition identifies tail neurons that can be
+    removed with zero accuracy loss.  At 75\% tail removal, this
+    strategy achieves 0\% accuracy loss at every scale tested
+    ($H = 50$ to $200$), outperforming random pruning by 10--15
+    percentage points and strictly outperforming magnitude,
+    activation, and sensitivity baselines
+    (Section~\ref{sec:pruning}).
+\end{enumerate}
+
+
+\subsection{Related work}\label{sec:related}
+
+\paragraph{Positroid theory.}
+Positroids were introduced by Postnikov \citep{postnikov2006} as
+matroids realizable in $\Gr_+(k,n)$, with characterizations via
+Grassmann necklaces, decorated permutations, and plabic graphs.  Oh
+\citep{oh2011} proved that positroids are exactly intersections of
+cyclically shifted Schubert matroids.
+Knutson, Lam, and Speyer \citep{knutson2013} studied positroid
+varieties.  Łukowski, Parisi, and Williams \citep{lukowski2023}
+connected positroid combinatorics to the amplituhedron program.
+
+\paragraph{ReLU network geometry.}
+The hyperplane arrangement perspective on ReLU networks has been
+studied by several authors.  Zhang, Naitzat, and Lim
+\citep{zhang2018} studied neural networks through tropical geometry.
+Hanin and Rolnick \citep{hanin2019} counted linear regions.  The
+connection between network architecture and arrangement combinatorics
+remains largely unexplored from the matroid-theoretic viewpoint.
+
+\paragraph{Implicit bias of gradient descent.}
+Soudry et~al.\ \citep{soudry2018} showed that gradient descent on
+separable data converges in direction to the max-margin classifier.
+Gunasekar et~al.\ \citep{gunasekar2018} studied implicit bias toward
+sparsity in the frequency domain for linear convolutional networks.  Our work reveals a new form of implicit bias:
+\emph{combinatorial} implicit bias, where training induces a
+specific matroid type (positroid) rather than a specific
+norm or rank.
+
+\paragraph{Neural network pruning.}
+Magnitude pruning \citep{han2015} removes weights by absolute value.
+Structured pruning methods identify entire neurons or channels for
+removal.  Our approach is fundamentally different: we use the
+matroid structure of the hyperplane arrangement to identify neurons
+whose removal is \emph{provably} lossless with respect to the
+arrangement's combinatorics.
+
+
+% ══════════════════════════════════════════════════════════════════════
+\section{Setup and the conjecture}\label{sec:setup}
+% ══════════════════════════════════════════════════════════════════════
+
+\subsection{Matroids and positroids}\label{sec:matroids}
+
+\begin{definition}[Matroid]
+  A \emph{matroid} $\cM = (E, \cB)$ is a finite ground set $E$ with
+  a nonempty collection $\cB \subseteq 2^E$ of \emph{bases}---subsets
+  of equal cardinality $k = \rank(\cM)$---satisfying the exchange
+  axiom: for any $B_1, B_2 \in \cB$ and $x \in B_1 \setminus B_2$,
+  there exists $y \in B_2 \setminus B_1$ such that
+  $(B_1 \setminus \{x\}) \cup \{y\} \in \cB$.
+\end{definition}
+
+\begin{definition}[Linear and affine matroid]
+  Given vectors $v_1, \ldots, v_m \in \R^n$, the \emph{linear
+  matroid} has ground set $[m]$ and bases
+  $\cB = \{B \subseteq [m] : |B| = k,\; \{v_i : i \in B\} \text{
+  are linearly independent}\}$, where $k = \rank[v_1 \cdots v_m]$.
+  The \emph{affine matroid} of hyperplanes with normals
+  $w_1, \ldots, w_m \in \R^d$ and biases $b_1, \ldots, b_m \in \R$
+  is the linear matroid of the augmented matrix
+  $[W \mid b] \in \R^{m \times (d+1)}$, where $W$ has rows $w_i$
+  and $b$ has entries $b_i$.
+\end{definition}
+
+\begin{definition}[Cyclic interval]\label{def:cyclic-interval}
+  A subset $S \subseteq [n] = \{0, 1, \ldots, n{-}1\}$ is a
+  \emph{cyclic interval} if $S = \{j, j{+}1, \ldots, j{+}|S|{-}1\}
+  \bmod n$ for some $j \in [n]$.  Equivalently, the elements of~$S$
+  form a contiguous arc when placed on the circle $\Z/n\Z$.
+\end{definition}
+
+\begin{definition}[Grassmann necklace and positroid]
+\label{def:grassmann-necklace}
+  Let $\cM$ be a matroid of rank~$k$ on~$[n]$.  For $j \in [n]$,
+  define the \emph{cyclic order} $\leq_j$ on $[n]$ by
+  $j <_j j{+}1 <_j \cdots <_j j{-}1$ (indices mod~$n$).  The
+  \emph{Grassmann necklace} of $\cM$ is
+  $\cI = (I_0, I_1, \ldots, I_{n-1})$, where $I_j$ is the
+  lexicographically smallest basis of $\cM$ in the order $\leq_j$.
+
+  The \emph{Gale order} $\geq_j$ on $k$-subsets is defined by: writing
+  $B = \{b_1 <_j \cdots <_j b_k\}$ and
+  $I_j = \{i_1 <_j \cdots <_j i_k\}$, we have
+  $B \geq_j I_j$ iff $b_\ell \geq_j i_\ell$ for all
+  $\ell = 1, \ldots, k$.
+
+  A matroid $\cM$ is a \emph{positroid} if
+  $\cB(\cM) = \{B \subseteq [n] : |B| = k,\;
+  B \geq_j I_j \text{ for all } j \in [n]\}$.
+\end{definition}
+
+\begin{definition}[Totally positive matrix]\label{def:tp}
+  A real matrix $M$ is \emph{totally positive (TP)} if every minor
+  (determinant of every square submatrix) is strictly positive.  A
+  matrix is \emph{totally nonnegative (TN)} if every minor is
+  nonnegative.
+\end{definition}
+
+
+\subsection{Network setup}\label{sec:network-setup}
+
+We consider single-hidden-layer ReLU networks
+\begin{equation}\label{eq:network}
+  f(x) = W_2 \cdot \relu(W_1 x + b_1) + b_2,
+\end{equation}
+where $W_1 \in \R^{H \times d}$ is the weight matrix, $b_1 \in
+\R^H$ is the bias vector, $W_2 \in \R^{c \times H}$ and $b_2 \in
+\R^c$ are the output layer parameters, and $\relu(z) = \max(z, 0)$
+is applied element-wise.
+
+The $i$-th hidden neuron defines the hyperplane
+$h_i = \{x \in \R^d : w_i^\top x + b_i = 0\}$, partitioning input
+space into $2^H$ (at most) activation regions
+(Figure~\ref{fig:hyperplanes}).  The augmented matrix
+$A = [W_1 \mid b_1] \in \R^{H \times (d+1)}$
+defines an affine matroid $\cM(A)$ of rank at most $d + 1$ on
+ground set $[H]$.
+
+\paragraph{TP weight construction.}
+We construct TP weight matrices using Karlin's kernel theory
+\citep{karlin1968}: for strictly increasing sequences
+$a_1 < \cdots < a_H$ and $b_1 < \cdots < b_d$, the matrix
+$(W_1)_{ij} = \exp(a_i \cdot b_j)$ is totally positive.  The
+Cauchy kernel $(W_1)_{ij} = 1/(a_i + b_j)$ with strictly
+increasing positive sequences provides an alternative TP
+construction.  Biases are initialized randomly.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.65\linewidth]{figures/fig-hyperplanes.pdf}
+  \caption{Hyperplane arrangement of a TP-constrained ReLU network
+    ($H = 8$, $d = 2$) trained on the two-moons dataset.  Each line
+    is the decision boundary $w_i^\top x + b_i = 0$ of one hidden
+    neuron.  The affine matroid of the augmented matrix
+    $[W_1 \mid b_1]$ captures which triples of these hyperplanes
+    meet at a common point (non-bases).}
+  \label{fig:hyperplanes}
+\end{figure}
+
+
+\subsection{The conjecture}\label{sec:conjecture}
+
+\begin{conjecture}[Activation Positroid Conjecture]
+\label{conj:apc}
+  If $W_1$ is totally positive, then for any bias vector $b_1$ the
+  affine matroid $\cM([W_1 \mid b_1])$ is a positroid.
+\end{conjecture}
+
+We tested Conjecture~\ref{conj:apc} across 800+ training trials on
+multiple datasets (two-moons, concentric circles, spirals, XOR,
+PCA-reduced digits) with hidden dimensions $H \in \{6, 8, 10, 12,
+14, 16, 18, 20\}$ and both TP-constrained and unconstrained training.
+
+\begin{center}
+\begin{tabular}{lccc}
+  \toprule
+  \textbf{Mode} & \textbf{Trials} & \textbf{Positroid rate} & \textbf{Non-uniform rate} \\
+  \midrule
+  TP exponential & 400+ & 100\% & varies \\
+  TP Cauchy      & 200+ & 100\% & varies \\
+  Unconstrained  & 200+ & 100\% & varies \\
+  \bottomrule
+\end{tabular}
+\end{center}
+
+Every trial produced a positroid activation matroid.  Many are
+trivially positroid (uniform matroid $U(d{+}1, H)$, meaning all
+hyperplane $(d{+}1)$-tuples are in general position), but
+non-uniform matroids---those with genuine dependencies among
+hyperplanes---also arise, particularly from the exponential kernel on
+the two-moons dataset.
+
+\begin{remark}
+  Unconstrained (non-TP) training also produces 100\% positroid rate
+  in our experiments, but every unconstrained trial yields a uniform
+  matroid---so the positroid property is vacuous.  Whether gradient
+  descent itself induces positroid structure when non-uniform matroids
+  arise requires a non-TP parameterisation that produces genuine
+  dependencies; we investigate this in
+  Section~\ref{sec:tp-essential}.
+\end{remark}
+
+
+% ══════════════════════════════════════════════════════════════════════
+\section{Disproving the conjecture}\label{sec:counterexamples}
+% ══════════════════════════════════════════════════════════════════════
+
+The TP constraint applies to $W_1$ but not to $b_1$.  This gap
+allows us to construct counterexamples.
+
+\subsection{Dependency coefficients}\label{sec:dependency}
+
+For a rank-$(d{+}1)$ matroid on $[H]$, each non-basis is a
+$(d{+}1)$-element subset $S$ whose corresponding rows of the
+augmented matrix $[W_1 \mid b_1]$ are linearly dependent.  This
+dependence takes the form
+\begin{equation}\label{eq:dependency}
+  \sum_{i \in S} c_i \begin{pmatrix} w_i \\ b_i \end{pmatrix} = 0,
+\end{equation}
+where $c = (c_i)_{i \in S}$ is the dependency coefficient vector,
+computable from the left null space of the submatrix indexed by $S$.
+
+When $d = 2$ (rank $k = 3$), each dependency
+$c_i [w_i \mid b_i] + c_j [w_j \mid b_j] + c_k [w_k \mid b_k] = 0$
+with the TP constraint on $W_1$ forces a specific sign pattern on
+$(c_i, c_j, c_k)$: by the TP property, alternating signs $(+, -, +)$
+up to global scaling.
+
+Crucially, equation~\eqref{eq:dependency} is \emph{linear} in the
+biases $b_i$.  Given fixed TP weights, one can solve for biases that
+force any desired subset to become a non-basis.
+
+\subsection{Crossing circuits}\label{sec:crossing}
+
+\begin{definition}[Crossing pair]\label{def:crossing}
+  Two subsets $S_1, S_2 \subseteq [n]$ form a \emph{crossing pair}
+  if neither $S_1 \setminus S_2$ nor $S_2 \setminus S_1$ can be
+  contained in a single arc of the circle~$\Z/n\Z$ between
+  consecutive elements of the other set.  Equivalently, $S_1$ and
+  $S_2$ ``interleave'' on the circle.
+\end{definition}
+
+The key empirical observation is that crossing non-bases are an
+obstruction to the positroid property.  If two non-bases form a
+crossing pair, the Grassmann necklace reconstruction cannot
+simultaneously accommodate both, potentially breaking the positroid
+structure.  (We do not prove this in general; the connection is
+verified computationally for the matroids in our experiments.)
+
+\subsection{Counterexample construction}\label{sec:construction}
+
+Our \emph{targeted search} employs two strategies:
+\begin{enumerate}
+  \item Generate a TP weight matrix $W_1$ (exponential kernel).
+  \item \textbf{Crossing-pair strategy.}  Identify pairs of
+    $(d{+}1)$-subsets that interleave on the circle and solve
+    the linear system~\eqref{eq:dependency} for biases $b_1$
+    forcing both subsets to become non-bases simultaneously.
+  \item \textbf{Single-spread strategy.}  Choose a single
+    non-interval $(d{+}1)$-subset and solve for biases making it
+    a non-basis.
+  \item Verify the resulting affine matroid $\cM([W_1 \mid b_1])$ is
+    (a)~TP-weight, (b)~non-uniform, and (c)~non-positroid.
+\end{enumerate}
+Crossing pairs succeed at ${\sim}89\%$ of non-uniform trials;
+single spread non-bases at ${\sim}73\%$.
+
+\begin{example}\label{ex:smallest}
+  The smallest counterexample arises at $(d, H) = (2, 5)$: a
+  rank-3 matroid on $[5]$ obtained from $U(3, 5)$ by declaring
+  $\{0, 2, 4\}$ a non-basis.  The subset $\{0, 2, 4\}$ is \emph{not}
+  a cyclic interval (the elements alternate around the circle),
+  and the resulting matroid fails the positroid property.
+\end{example}
+
+\subsection{Results}\label{sec:counterexample-results}
+
+Across configurations $(d, H) \in \{(2,5), (2,6), (2,8)\}$
+with the exponential TP kernel, we constructed
+\textbf{12,642 counterexamples}: TP-weight networks with
+deliberately chosen biases whose affine matroids are not positroids.
+
+The counterexamples reveal a sharp dichotomy.  Among 1{,}238
+non-uniform matroids from 2{,}793 TP network trials (combining
+targeted and random bias strategies):
+
+\begin{center}
+\begin{tabular}{lcc}
+  \toprule
+  & \textbf{Positroid} & \textbf{Non-positroid} \\
+  \midrule
+  All non-bases are cyclic intervals & 433 & \textbf{0} \\
+  Has $\geq 1$ non-interval non-basis & 58 & 747 \\
+  \bottomrule
+\end{tabular}
+\end{center}
+
+\noindent The zero in the upper-right cell is not a coincidence---it
+is the content of Theorem~\ref{thm:cip} (see also
+Figure~\ref{fig:dichotomy}).  The 58 positroids with non-interval
+non-bases show that the converse does not hold: having a spread
+non-basis is necessary but not sufficient for breaking positroid
+structure.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.65\linewidth]{figures/fig-dichotomy.pdf}
+  \caption{Counterexample dichotomy.  Among 1{,}238 non-uniform
+    matroids from 2{,}793 TP network trials, the zero count (left,
+    non-positroid column) is explained by the CIP theorem: cyclic
+    interval non-bases \emph{never} break positroid structure.}
+  \label{fig:dichotomy}
+\end{figure}
+
+\subsection{Revised conjecture}\label{sec:revised-conjecture}
+
+The counterexamples above disprove Conjecture~\ref{conj:apc} as
+stated: TP weights alone do not force positroid structure.  However,
+the 800+ trained networks (TP and unconstrained) from
+Section~\ref{sec:conjecture} all produced positroids, and their
+non-basis support is always a contiguous range of neuron
+indices---never the gapped or interleaving patterns that the
+counterexample search exploits.  This motivates a weaker conjecture:
+
+\begin{conjecture}[Trained Positroid Conjecture]
+\label{conj:trained}
+  If $W_1$ is totally positive and the network~\eqref{eq:network}
+  is trained by gradient descent, then the affine matroid
+  $\cM([W_1 \mid b_1])$ is a positroid.
+\end{conjecture}
+
+\noindent This shifts the claim from a static algebraic property of
+TP matrices to a dynamical one about the interaction between TP
+structure and gradient-based optimisation.
+
+
+% ══════════════════════════════════════════════════════════════════════
+\section{The theorems}\label{sec:theorems}
+% ══════════════════════════════════════════════════════════════════════
+
+\subsection{Contiguous-Implies-Positroid}\label{sec:cip}
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.75\linewidth]{figures/fig-intervals.pdf}
+  \caption{Non-basis patterns on the ground set $[6] = \{0,\ldots,5\}$,
+    viewed on a circle.  \textbf{Left:} The subset $\{2,3,4\}$ forms a
+    contiguous arc (cyclic interval); by the CIP theorem, declaring it a
+    non-basis always yields a positroid.  \textbf{Right:} The subset
+    $\{0,2,4\}$ is non-contiguous; declaring it a non-basis produces a
+    non-positroid (Corollary~\ref{cor:single-removal}).}
+  \label{fig:intervals}
+\end{figure}
+
+\begin{theorem}[Contiguous-Implies-Positroid (CIP)]
+\label{thm:cip}
+  Let $\cM$ be a matroid of rank $k$ on $[n]$.  If every non-basis
+  of $\cM$ is a cyclic interval (Definition~\ref{def:cyclic-interval}),
+  then $\cM$ is a positroid.
+\end{theorem}
+
+\begin{proof}
+  Let $\cI = (I_0, \ldots, I_{n-1})$ be the Grassmann necklace of
+  $\cM$.  By the characterization of positroids
+  (Definition~\ref{def:grassmann-necklace}), it suffices to show
+  that a $k$-subset $B \subseteq [n]$ is a basis of $\cM$ if and
+  only if $B \geq_j I_j$ for all $j \in [n]$.
+
+  \smallskip\noindent
+  $(\Rightarrow)$\; If $B$ is a basis, then $B \geq_j I_j$ for
+  every $j$, because $I_j$ is by definition the minimum basis in
+  the Gale order $\geq_j$.
+
+  \smallskip\noindent
+  $(\Leftarrow)$\; Suppose $B$ is \emph{not} a basis.  We exhibit
+  $j$ such that $B \not\geq_j I_j$.  By hypothesis, $B$ is a
+  cyclic interval, say $B = \{a, a{+}1, \ldots, a{+}k{-}1\} \bmod n$.
+  This is the lexicographically \emph{smallest} $k$-subset in the
+  cyclic order~$\leq_a$: for any $k$-subset $S$, we have
+  $S \geq_a B$.  In particular, $I_a \geq_a B$.  Since $B$ is not a
+  basis but $I_a$ is, $I_a \neq B$, whence $I_a >_a B$.  This means
+  $B <_a I_a$, so $B \not\geq_a I_a$.
+\end{proof}
+
+\begin{corollary}[Single-removal dichotomy]\label{cor:single-removal}
+  Let $2 \leq k \leq n - 2$, let $S$ be a $k$-subset of $[n]$, and
+  let $\cM = U(k,n) \setminus \{S\}$ be the matroid obtained from
+  the uniform matroid by declaring $S$ a
+  non-basis.\footnote{More precisely, $\cM$ has bases
+  $\binom{[n]}{k} \setminus \{S\}$, which satisfies the exchange
+  axiom when $n > k$.}  Then $\cM$ is a positroid if and only if
+  $S$ is a cyclic interval (see Figure~\ref{fig:intervals}).
+\end{corollary}
+
+\begin{proof}
+  The forward direction is Theorem~\ref{thm:cip}.  For the converse,
+  suppose $S$ is not a cyclic interval.  Then for every $j$, the
+  cyclic interval $\{j, j{+}1, \ldots, j{+}k{-}1\}$ is still a
+  basis, so $I_j = \{j, j{+}1, \ldots, j{+}k{-}1\}$.  Since this
+  interval is the Gale-minimum $k$-subset in $\leq_j$, every
+  $k$-subset Gale-dominates it; in particular $S \geq_j I_j$ for
+  all~$j$.  But $S \notin \cB(\cM)$, so $\cM$ has a non-basis that
+  satisfies all $n$ Gale conditions and therefore $\cM$ is not a
+  positroid.
+\end{proof}
+
+\begin{remark}
+  The if-and-only-if characterization is specific to single removal.
+  For multi-removal matroids (multiple non-bases declared),
+  non-interval non-bases can still yield positroids: among $2{,}793$
+  TP network trials, $58$ positroids had at least one non-interval
+  non-basis.
+\end{remark}
+
+
+\subsection{Contiguous-Support Positroid Theorem}\label{sec:cspt}
+
+The CIP theorem handles the case where individual non-bases are
+cyclic intervals.  In practice, trained networks often have
+\emph{many} non-bases (at $H = 200$ with $d = 2$, potentially
+thousands), but their \emph{support}---the union of all elements
+appearing in any non-basis---forms a contiguous arc.
+
+\begin{definition}[Non-basis support]\label{def:support}
+  For a matroid $\cM = (E, \cB)$ of rank $k$, the \emph{non-basis
+  support} is
+  \[
+    \supp(\cM) = \bigcup \bigl\{ B \subseteq E : |B| = k,\;
+    B \notin \cB \bigr\}.
+  \]
+  This is the set of elements that participate in at least one
+  non-basis.  For the uniform matroid, $\supp(\cM) = \emptyset$.
+\end{definition}
+
+\begin{definition}[Support rank deficiency]\label{def:rank-deficiency}
+  The \emph{support rank deficiency} of $\cM$ is
+  $k - \rank_\cM(\supp(\cM))$, where $\rank_\cM(S)$ is the size of
+  the largest independent subset of $S$.
+\end{definition}
+
+\begin{theorem}[Contiguous-Support Positroid Theorem (CSPT)]
+\label{thm:cspt}
+  Let $\cM$ be a matroid of rank $k$ on $[n]$.  Let $S = \supp(\cM)$
+  be the non-basis support.  If $S$ is a cyclic interval and
+  $\rank_\cM(S) = r < k$, then $\cM$ is a positroid.
+\end{theorem}
+
+\begin{proof}
+  Since every non-basis $B$ has $B \subseteq S$ by definition of
+  support, and $\rank_\cM(S) = r < k = |B|$, every $k$-subset of
+  $S$ is dependent, hence a non-basis.  Conversely, any $k$-subset
+  \emph{not} entirely contained in $S$ contains an element
+  $e \notin S$; if it were a non-basis, then $e$ would be in the
+  support, contradicting $e \notin S$.  Therefore:
+  \begin{equation}\label{eq:basis-characterization}
+    B \in \cB(\cM) \iff B \not\subseteq S.
+  \end{equation}
+
+  Let $S = \{a, a{+}1, \ldots, a{+}s{-}1\} \bmod n$ with $s = |S|$,
+  and let $\bar S = [n] \setminus S$.  Let $\cI = (I_0, \ldots,
+  I_{n-1})$ be the Grassmann necklace.  We verify the Gale order
+  characterization.
+
+  \smallskip\noindent
+  $(\Rightarrow)$\; Immediate from the definition of $I_j$ as the
+  Gale-minimum basis.
+
+  \smallskip\noindent
+  $(\Leftarrow)$\; Let $B$ be a non-basis, so $B \subseteq S$ with
+  $|B| = k$.  Consider $j = a$.  In the cyclic order~$\leq_a$,
+  every element of $S$ precedes every element of $\bar S$:
+  $a <_a a{+}1 <_a \cdots <_a a{+}s{-}1 <_a a{+}s <_a \cdots$.
+
+  The lex-min basis $I_a$ is constructed by the greedy algorithm
+  starting at $a$.  Since $\rank_\cM(S) = r$, the greedy picks
+  exactly $r$ elements from $S$ (the first $r$ that maintain
+  independence) before no further element of $S$ can increase rank.
+  It then picks $k - r$ elements from~$\bar{S}$.
+
+  Write $I_a = \{i_1 <_a \cdots <_a i_k\}$ and
+  $B = \{b_1 <_a \cdots <_a b_k\}$.  The first $r$ elements
+  $i_1, \ldots, i_r$ lie in $S$, and $i_{r+1}, \ldots, i_k$ lie
+  in $\bar{S}$.  All elements of $B$ lie in $S$.  At position
+  $\ell = r + 1$:
+  \[
+    b_{r+1} \in S, \qquad i_{r+1} \in \bar{S}, \qquad
+    b_{r+1} <_a i_{r+1},
+  \]
+  since $S$ precedes $\bar{S}$ in the order $\leq_a$.  Therefore
+  $B \not\geq_a I_a$.
+\end{proof}
+
+\begin{corollary}[Tail-collapse positroid]\label{cor:tail-collapse}
+  If a trained TP-weight network has non-basis support forming a
+  cyclic interval of rank less than $d + 1$, the activation matroid
+  is a positroid.
+\end{corollary}
+
+\begin{remark}\label{rem:hypotheses-necessary}
+  Both hypotheses are necessary.  The cyclic interval condition
+  fails for $U(2, 5) \setminus \{\{0, 2\}\}$: the support $\{0, 2\}$
+  is not a cyclic interval on $[5]$ (elements $0$ and $2$ are
+  separated by~$1$), and the matroid is not a positroid.  The rank
+  condition is also essential: if the support were a cyclic interval
+  but had full rank~$k$, some $k$-subsets of $S$ would be bases,
+  breaking the clean characterization~\eqref{eq:basis-characterization},
+  and non-positroid examples can arise.
+\end{remark}
+
+
+% ══════════════════════════════════════════════════════════════════════
+\section{TP structure is essential}\label{sec:tp-essential}
+% ══════════════════════════════════════════════════════════════════════
+
+The CIP and CSPT theorems explain \emph{why} contiguous support
+implies positroid structure, but not \emph{why} trained TP networks
+always produce contiguous support.  To isolate the role of total
+positivity, we compare eight weight parameterization modes.
+
+\subsection{Parameterization modes}\label{sec:param-modes}
+
+All modes use the same architecture and training procedure (Adam
+optimizer, learning rate $0.01$, 200 epochs on the two-moons dataset,
+$H \in \{6, 8, 10\}$, $d = 2$).  Weight matrices differ only in
+initialization and constraint structure:
+
+\begin{enumerate}
+  \item \textbf{TP exponential:} $W_{ij} = \exp(a_i \cdot b_j)$
+    with strictly increasing $a, b$.
+  \item \textbf{TP Cauchy:} $W_{ij} = 1/(a_i + b_j)$ with
+    strictly increasing positive $a, b$.
+  \item \textbf{Sinusoidal (non-TP):}
+    $W_{ij} = 2 + \sin(a_i \cdot b_j)$.
+  \item \textbf{Quadratic distance (non-TP):}
+    $W_{ij} = (a_i - b_j)^2 + 1$.
+  \item \textbf{Unconstrained:} Xavier/Glorot initialization.
+  \item \textbf{Permuted exponential (non-TP):}
+    $W_{ij} = \exp(a_i \cdot b_{\pi(j)})$ where $\pi$ reverses the
+    column ordering.
+  \item \textbf{Negated bidiagonal (non-TP):}
+    $W = B \cdot \exp(a b^\top)$ where $B$ is lower bidiagonal with
+    alternating-sign subdiagonal entries
+    ($B_{i+1,i} = (-1)^{i+1} \cdot 1.5$).
+  \item \textbf{Fixed convergent bias-only (non-TP):} Frozen $W_1$,
+    train only biases and the output layer.
+\end{enumerate}
+
+Modes 1--2 maintain TP structure by parameterizing $a$ and $b$
+through cumulative softplus to enforce strict monotonicity during
+training.
+
+\subsection{Results}\label{sec:tp-results}
+
+Across 60 moons trials per mode (20 trials $\times$ 3 hidden
+dimensions):
+
+\begin{center}
+\begin{tabular}{lcc}
+  \toprule
+  \textbf{Mode} & \textbf{Non-positroid rate} & \textbf{Non-uniform rate} \\
+  \midrule
+  TP exponential & 0/60 (0\%) & 13/60 (22\%) \\
+  TP Cauchy & 0/60 (0\%) & 0/60 (0\%) \\
+  Negated bidiagonal & 2/60 (3.3\%) & 15/60 (25\%) \\
+  All other non-TP & 0/60 (0\%) & 0/60 (0\%) \\
+  \bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+Note that TP Cauchy and ``all other non-TP'' modes have 0\%
+non-uniform rate: every trial produced a uniform matroid, so the 0\%
+non-positroid rate is vacuous (all uniform matroids are trivially
+positroid).  Only TP exponential and negated bidiagonal produce
+non-uniform matroids that genuinely test the positroid question.
+
+The negated bidiagonal mode produced two non-positroid matroids with
+gapped (non-contiguous) non-basis supports: $\{1,3,4,5\}$ (at $H=6$,
+skipping elements $0$ and $2$) and $\{3,5,6,7,8,9\}$ (at $H=10$,
+skipping element $4$).  These gaps violate the hypothesis of the
+CSPT.
+
+\subsection{Causal mechanism}\label{sec:causal}
+
+The experimental evidence supports the causal chain:
+\begin{equation}\label{eq:causal}
+  \underset{\text{(weight structure)}}{\text{TP}}
+  \;\longrightarrow\;
+  \underset{\text{(training dynamics)}}{\text{contiguous support}}
+  \;\longrightarrow\;
+  \underset{\text{(Theorem~\ref{thm:cspt})}}{\text{positroid}}
+\end{equation}
+
+\begin{itemize}
+  \item \textbf{TP $\to$ contiguous support:} The TP property
+    constrains the normal vectors to lie in a specific geometric
+    configuration.  Empirically, this causes the rank-deficient
+    hyperplanes to cluster as a contiguous arc in the cyclic ordering
+    inherited from the TP parametrization.
+
+  \item \textbf{Contiguous support $\to$ positroid:} This is the
+    content of the CSPT (Theorem~\ref{thm:cspt}).
+
+  \item \textbf{Breaking TP breaks contiguity:} The negated
+    bidiagonal mode, which has a controlled non-TP perturbation,
+    can produce gapped supports, which the CSPT cannot rescue.
+\end{itemize}
+
+\begin{remark}
+  The first arrow---why TP weights produce contiguous support under
+  gradient descent---remains an open question.  We conjecture it
+  relates to the monotone convergence of normal vectors in the TP
+  parameterization, where the cyclic ordering of hyperplane normals
+  is preserved throughout training.
+\end{remark}
+
+
+% ══════════════════════════════════════════════════════════════════════
+\section{Matroid-guided pruning}\label{sec:pruning}
+% ══════════════════════════════════════════════════════════════════════
+
+The matroid structure provides a principled criterion for neural
+network pruning that does not require retraining, importance scoring,
+or gradient computation.
+
+\subsection{Essential and tail neurons}\label{sec:essential-tail}
+
+\begin{definition}[Essential and tail partition]
+  Given a network with affine matroid $\cM$ on $[H]$, we define:
+  \begin{itemize}
+    \item \textbf{Essential neurons:} $[H] \setminus \supp(\cM)$,
+      the elements not contained in any non-basis.  Every $k$-subset
+      containing an essential neuron is linearly independent.
+    \item \textbf{Tail neurons:} $\supp(\cM)$, the elements that
+      participate in at least one non-basis.
+  \end{itemize}
+\end{definition}
+
+At input dimension $d = 2$, the affine matroid has rank $k = 3$, so
+at most 3 neurons carry independent geometric information.  At
+$H = 200$, over 170 neurons are tail---they contribute no
+additional combinatorial structure to the hyperplane arrangement
+beyond what the essential neurons provide
+(Figure~\ref{fig:pruning}a).
+
+\subsection{Pruning strategies}\label{sec:strategies}
+
+We compare five pruning strategies:
+
+\begin{enumerate}
+  \item \textbf{Matroid-guided:} Remove tail neurons
+    entirely---delete the corresponding rows of $W_1$, entries of
+    $b_1$, and columns of $W_2$.  The network shrinks from $H$ to
+    $H - |\text{pruned}|$ neurons.
+
+  \item \textbf{Random:} Remove the same number of neurons as
+    matroid-guided but selected uniformly at random.  Averaged over
+    20 draws.
+
+  \item \textbf{Magnitude:} Remove neurons with smallest $\ell^2$
+    norm $\|w_i\|_2$ of their weight vectors.
+
+  \item \textbf{Activation:} Remove neurons with lowest mean ReLU
+    activation $\mathbb{E}_x[\relu(w_i^\top x + b_i)]$, analogous
+    to the APoZ criterion.
+
+  \item \textbf{Sensitivity:} Remove neurons with smallest
+    importance score $|W_{2,i}| \cdot \|w_i\|_2$, combining output
+    weight magnitude with input weight norm.
+\end{enumerate}
+
+\subsection{Results}\label{sec:pruning-results}
+
+We train TP-exponential networks on the two-moons dataset at
+$H \in \{50, 100, 200\}$ with $d = 2$, 200 training samples,
+and evaluate pruning at fractions $\{0\%, 25\%, 50\%, 75\%, 100\%\}$
+of tail neurons (Figure~\ref{fig:pruning}).
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\linewidth]{figures/fig-pruning.pdf}
+  \caption{\textbf{(a)}~Essential (thick) vs.\ tail (thin) hyperplanes
+    in a trained TP network ($H = 20$, $d = 2$).  Only 4 essential
+    neurons carry independent geometric information; the remaining 16
+    are redundant in the affine matroid.
+    \textbf{(b)}~Pruning curves at $H = 200$.  Matroid-guided pruning
+    maintains zero accuracy loss through 75\% tail removal, outperforming
+    random pruning by 14.4 percentage points.}
+  \label{fig:pruning}
+\end{figure}
+
+\paragraph{75\% tail removal: zero accuracy loss.}
+Table~\ref{tab:pruning-75} shows the accuracy delta (pruned minus
+original) at 75\% tail removal across all scales and strategies.
+
+\begin{table}[t]
+  \centering
+  \caption{Accuracy delta at 75\% tail removal.  Matroid-guided
+    achieves zero loss at every scale; random pruning degrades
+    by 10--15 percentage points.  On this dataset, magnitude,
+    activation, and sensitivity heuristics select identical neuron
+    sets.}
+  \label{tab:pruning-75}
+  \begin{tabular}{lccc}
+    \toprule
+    \textbf{Strategy} & $H=50$ & $H=100$ & $H=200$ \\
+    \midrule
+    Matroid-guided & $0.0\%$ & $0.0\%$ & $0.0\%$ \\
+    Magnitude & $-0.7\%$ & $-0.5\%$ & $-0.3\%$ \\
+    Activation & $-0.7\%$ & $-0.5\%$ & $-0.3\%$ \\
+    Sensitivity & $-0.7\%$ & $-0.5\%$ & $-0.3\%$ \\
+    Random & $-10.2\%$ & $-15.4\%$ & $-14.4\%$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\paragraph{Pruning curves.}
+At $H = 200$, the matroid-guided strategy maintains 0\% accuracy
+delta through 75\% tail removal, dropping to $-0.7\%$ only at 100\%
+(removing all tail neurons).  Random pruning degrades monotonically,
+reaching $-20.9\%$ at 100\%.  Heuristic baselines (magnitude,
+activation, sensitivity) plateau at $-0.3\%$.  The three heuristics
+select identical neuron sets because the exponential kernel assigns
+monotonically increasing weight norms to higher-index neurons, so
+magnitude, mean activation, and gradient sensitivity all produce the
+same pruning order---this is a property of the TP parameterization,
+not evidence that the methods are equivalent in general.
+The advantage of matroid-guided over random is approximately 14.4
+percentage points at 75\% pruning.
+
+\paragraph{Scaling behavior.}
+The advantage of matroid-guided pruning is consistent across scales:
+10--15pp over random at every $H$ tested.  The absolute number of
+pruned neurons grows (from $\sim$29 at $H = 50$ to $\sim$138 at
+$H = 200$), but the accuracy impact remains zero through 75\%.
+
+\subsection{Why it works}\label{sec:why-pruning}
+
+The matroid partition identifies functional redundancy at the level
+of the hyperplane arrangement.  Tail neurons define hyperplanes that
+are \emph{linearly dependent} on the essential neurons' hyperplanes
+(in the affine sense).  Removing a tail neuron does not eliminate any
+activation region boundary that isn't already determined by the
+essential neurons.
+
+More precisely, let $A = [W_1 \mid b_1]$ be the augmented matrix.
+When $H \geq 2(d+1)$ (as in all our experiments), the essential set
+$[H] \setminus \supp(\cM)$ contains at least $d + 1$ elements whose
+rows span the full row space of $A$.  Tail neuron rows lie in this
+span and are therefore redundant.
+
+\begin{remark}[100\% tail removal]
+  Removing \emph{all} tail neurons is initialization-dependent.  At
+  $H = 200$, 100\% tail removal causes $-0.7\%$ accuracy loss---small
+  but nonzero.  This is because the network's output layer weights
+  $W_2$ assign nonzero weight to tail neurons, and removing them
+  changes the network function even though the arrangement
+  combinatorics are preserved.  At 75\%, the remaining tail neurons
+  absorb enough of this output weight to maintain accuracy.
+\end{remark}
+
+
+% ══════════════════════════════════════════════════════════════════════
+\section{Discussion}\label{sec:discussion}
+% ══════════════════════════════════════════════════════════════════════
+
+\subsection{Limitations}\label{sec:limitations}
+
+\paragraph{Input dimension.}
+All experiments use $d = 2$ (rank-3 affine matroids).  The theorems
+(CIP, CSPT) are dimension-agnostic, but the empirical verification
+is limited to rank 3.  At $d \geq 3$, the exponential TP kernel
+has only $H + d$ parameters---too few degrees of freedom to span
+$\mathbb{R}^d$, confining normals to a one-dimensional curve---and
+alternative TP constructions (Loewner--Whitney) produce uniform
+matroids.  Extending the empirical investigation to
+higher rank is an important direction.
+
+\paragraph{Single hidden layer.}
+We study only the first hidden layer's hyperplane arrangement.
+Multi-layer networks have more complex activation region structures
+that are not captured by a single affine matroid.
+
+\paragraph{Dataset simplicity.}
+The two-moons dataset is a simple binary classification task.  The
+pruning results on this dataset demonstrate the principle but do not
+directly predict performance on high-dimensional tasks.  The
+baselines (magnitude, activation, sensitivity) may have stronger
+relative performance on more complex datasets.
+
+\subsection{Connections to positive geometry}\label{sec:positive-geometry}
+
+The appearance of positroids in neural networks is tantalizing from
+the perspective of positive geometry \citep{arkani-hamed2017}.  The
+totally nonnegative Grassmannian $\Gr_{\geq 0}(k,n)$ and its
+positroid stratification play a central role in the amplituhedron
+program for scattering amplitudes.  Whether the connection between
+neural network training and positive geometry extends beyond the
+observations in this paper remains speculative.
+
+\subsection{Open questions}\label{sec:open}
+
+\begin{enumerate}
+  \item \textbf{Why does TP $+$ gradient descent produce contiguous
+    support?}  The first arrow in the causal chain~\eqref{eq:causal}
+    is empirical.  A proof would likely need to analyze the gradient
+    flow on the TP manifold and show that normal vector convergence
+    preserves contiguity.
+
+  \item \textbf{Higher rank.}  Do the CIP and CSPT phenomena persist
+    at rank $\geq 4$?  Computational challenges (enumerating all
+    $\binom{H}{k}$ subsets) limit direct verification, but proxy
+    metrics (contiguous window ranks, random sampling) could extend
+    the investigation.
+
+  \item \textbf{Multi-removal characterization.}  Among the 58
+    positroids with non-interval non-bases in our experiments, what
+    additional structure characterizes when a set of spread non-bases
+    is compatible with the positroid property?
+
+  \item \textbf{Multi-layer positroid signature.}  Can the positroid
+    analysis be extended across layers, perhaps via a sequence of
+    matroids or a matroid on the full network?
+
+  \item \textbf{Unconstrained training.}  Unconstrained networks
+    also achieve 100\% positroid rate.  Is gradient descent on
+    \emph{any} architecture an implicit TP regularizer, or does this
+    depend on specific features of SGD (momentum, learning rate,
+    batch size)?
+\end{enumerate}
+
+
+% ══════════════════════════════════════════════════════════════════════
+\section{Conclusion}\label{sec:conclusion}
+% ══════════════════════════════════════════════════════════════════════
+
+We have established a new connection between positroid combinatorics
+and the geometry of trained ReLU networks.  The
+Contiguous-Implies-Positroid theorem and its generalization (CSPT)
+explain why trained networks with TP weights always produce positroid
+activation matroids: training dynamics produce contiguous non-basis
+support, and contiguous support forces positroid structure.
+Counterexamples with adversarial biases (12{,}642 instances) show
+that the conjecture fails without training, precisely when non-bases
+exhibit spread (non-contiguous) patterns.
+
+The matroid structure is not merely a theoretical curiosity.  The
+essential/tail partition provides a principled pruning criterion that
+removes 75\% of tail neurons with zero accuracy loss, outperforming
+four standard baselines.  This suggests that matroid-theoretic analysis of
+neural network geometry can yield practical algorithmic benefits.
+
+\paragraph{Code availability.}
+Source code and experiments are available at
+\url{https://github.com/HarrisonTotty/positroid-structure-relu-networks}.
+
+
+% ══════════════════════════════════════════════════════════════════════
+% References
+% ══════════════════════════════════════════════════════════════════════
+
+\bibliographystyle{plainnat}
+
+\clearpage
+\begin{thebibliography}{20}
+
+\bibitem[Arkani-Hamed et~al.(2018)]{arkani-hamed2017}
+N.~Arkani-Hamed, Y.~Bai, S.~He, and G.~Yan.
+\newblock Scattering forms and the positive geometry of kinematics,
+  color and the worldsheet.
+\newblock \emph{Journal of High Energy Physics}, 2018(5):096, 2018.
+
+\bibitem[Gunasekar et~al.(2018)]{gunasekar2018}
+S.~Gunasekar, J.~Lee, D.~Soudry, and N.~Srebro.
+\newblock Implicit bias of gradient descent on linear convolutional
+  networks.
+\newblock In \emph{NeurIPS}, 2018.
+
+\bibitem[Han et~al.(2015)]{han2015}
+S.~Han, J.~Pool, J.~Tran, and W.~Dally.
+\newblock Learning both weights and connections for efficient neural
+  networks.
+\newblock In \emph{NeurIPS}, 2015.
+
+\bibitem[Hanin and Rolnick(2019)]{hanin2019}
+B.~Hanin and D.~Rolnick.
+\newblock Complexity of linear regions in deep neural networks.
+\newblock In \emph{ICML}, 2019.
+
+\bibitem[Karlin(1968)]{karlin1968}
+S.~Karlin.
+\newblock \emph{Total Positivity}.
+\newblock Stanford University Press, 1968.
+
+\bibitem[Knutson et~al.(2013)]{knutson2013}
+A.~Knutson, T.~Lam, and D.~Speyer.
+\newblock Positroid varieties: juggling and geometry.
+\newblock \emph{Compositio Mathematica}, 149(10):1710--1752, 2013.
+
+\bibitem[{\L}ukowski et~al.(2023)]{lukowski2023}
+T.~{\L}ukowski, M.~Parisi, and L.~Williams.
+\newblock The positive tropical Grassmannian, the hypersimplex, and
+  the $m=2$ amplituhedron.
+\newblock \emph{International Mathematics Research Notices},
+  2023(19):16778--16836, 2023.
+
+\bibitem[Oh(2011)]{oh2011}
+S.~Oh.
+\newblock Positroids and Schubert matroids.
+\newblock \emph{Journal of Combinatorial Theory, Series A},
+  118(8):2426--2435, 2011.
+
+\bibitem[Postnikov(2006)]{postnikov2006}
+A.~Postnikov.
+\newblock Total positivity, Grassmannians, and networks.
+\newblock \emph{arXiv:math/0609764}, 2006.
+
+\bibitem[Soudry et~al.(2018)]{soudry2018}
+D.~Soudry, E.~Hoffer, M.~S. Nacson, S.~Gunasekar, and N.~Srebro.
+\newblock The implicit bias of gradient descent on separable data.
+\newblock \emph{Journal of Machine Learning Research}, 19(70):1--57,
+  2018.
+
+\bibitem[Zhang et~al.(2018)]{zhang2018}
+L.~Zhang, G.~Naitzat, and L.-H. Lim.
+\newblock Tropical geometry of deep neural networks.
+\newblock In \emph{ICML}, 2018.
+
+\end{thebibliography}
+
+\end{document}

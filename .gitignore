@@ -18,3 +18,11 @@ venv/
 uv.lock
 results/
 *.png
+
+# LaTeX build artifacts
+*.aux
+*.bbl
+*.blg
+*.log
+*.out
+*.pdf
