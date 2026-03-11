@@ -182,7 +182,6 @@ class CounterexampleResult:
     hidden_dim: int
     strategy: str
     tp_kernel: str
-    target_circuits: list[tuple[int, ...]] | None
 
     is_weight_tp: bool
     is_uniform: bool
@@ -190,6 +189,9 @@ class CounterexampleResult:
     num_bases: int
     total_possible_bases: int
     non_bases: list[tuple[int, ...]]
+
+    matrix_type: str = "tp"
+    target_circuits: list[tuple[int, ...]] | None = None
     grassmann_necklace: tuple[frozenset[int], ...] | None = None
     decorated_perm: list[int | None] | None = None
 
@@ -229,6 +231,7 @@ def _analyze_matroid(
     strategy: str,
     tp_kernel: str,
     target_circuits: list[tuple[int, ...]] | None,
+    matrix_type: str = "tp",
 ) -> CounterexampleResult | None:
     """Build the affine matroid from (W, b) and analyze it.
 
@@ -265,13 +268,14 @@ def _analyze_matroid(
         hidden_dim=hidden_dim,
         strategy=strategy,
         tp_kernel=tp_kernel,
-        target_circuits=target_circuits,
         is_weight_tp=bool(is_totally_positive(w)),
         is_uniform=aff_mat.is_uniform(),
         is_positroid=is_pos,
         num_bases=len(aff_mat.bases),
         total_possible_bases=comb(hidden_dim, rank),
         non_bases=non_bases,
+        matrix_type=matrix_type,
+        target_circuits=target_circuits,
         grassmann_necklace=necklace,
         decorated_perm=perm,
     )
@@ -383,6 +387,36 @@ def _make_tp_matrix(
         return random_totally_positive(hidden_dim, input_dim, rng=rng)
 
 
+def _make_non_tp_matrix(
+    hidden_dim: int,
+    input_dim: int,
+    kernel: str,
+    rng: np.random.Generator,
+) -> np.ndarray:
+    """Generate a non-TP matrix using the specified kernel.
+
+    Uses strictly increasing a, b sequences (same structure as TP kernels)
+    but with kernels that don't produce totally positive matrices.
+    """
+    a = np.sort(rng.uniform(0.5, 2.0, size=hidden_dim))
+    for i in range(1, hidden_dim):
+        if a[i] <= a[i - 1]:
+            a[i] = a[i - 1] + 0.01
+    b = np.sort(rng.uniform(0.5, 2.0, size=input_dim))
+    for i in range(1, input_dim):
+        if b[i] <= b[i - 1]:
+            b[i] = b[i - 1] + 0.01
+
+    if kernel == "sinusoidal":
+        return 2.0 + np.sin(np.outer(a, b))
+    elif kernel == "quadratic_distance":
+        diff = a[:, np.newaxis] - b[np.newaxis, :]
+        return diff * diff + 1.0
+    else:
+        msg = f"Unknown non-TP kernel: {kernel}"
+        raise ValueError(msg)
+
+
 def run_counterexample_search(
     configs: list[tuple[int, int]],
     num_matrices: int = 10,
@@ -390,6 +424,7 @@ def run_counterexample_search(
     num_random_trials: int = 50,
     seed: int = 42,
     kernels: list[str] | None = None,
+    non_tp_kernels: list[str] | None = None,
 ) -> SearchSummary:
     """Run the full counterexample search.
 
@@ -400,6 +435,8 @@ def run_counterexample_search(
         num_random_trials: Number of random bias trials per matrix.
         seed: Random seed.
         kernels: Which TP kernels to use. Default: ["exponential", "cauchy"].
+        non_tp_kernels: Optional non-TP kernels (sinusoidal, quadratic_distance)
+            to also test with the same search pipeline.
     """
     if strategies is None:
         strategies = ["targeted", "random"]
@@ -410,6 +447,7 @@ def run_counterexample_search(
     summary = SearchSummary()
 
     for input_dim, hidden_dim in configs:
+        # TP matrices
         for kernel in kernels:
             for _ in range(num_matrices):
                 w = _make_tp_matrix(hidden_dim, input_dim, kernel, rng)
@@ -434,6 +472,38 @@ def run_counterexample_search(
                         rng,
                     )
                     summary.results.extend(results)
+
+        # Non-TP matrices
+        if non_tp_kernels:
+            for kernel in non_tp_kernels:
+                for _ in range(num_matrices):
+                    w = _make_non_tp_matrix(hidden_dim, input_dim, kernel, rng)
+
+                    if "targeted" in strategies:
+                        results = targeted_search(
+                            w,
+                            input_dim,
+                            hidden_dim,
+                            kernel,
+                            rng,
+                        )
+                        # Tag results with non-TP matrix type
+                        for r in results:
+                            r.matrix_type = f"non_tp_{kernel}"
+                        summary.results.extend(results)
+
+                    if "random" in strategies:
+                        results = random_search(
+                            w,
+                            input_dim,
+                            hidden_dim,
+                            kernel,
+                            num_random_trials,
+                            rng,
+                        )
+                        for r in results:
+                            r.matrix_type = f"non_tp_{kernel}"
+                        summary.results.extend(results)
 
     return summary
 
@@ -479,6 +549,20 @@ def print_summary(summary: SearchSummary) -> None:
             f"{cex:>4} counterexamples"
         )
 
+    # Breakdown by matrix type (if multiple types present)
+    matrix_types = {r.matrix_type for r in summary.results}
+    if len(matrix_types) > 1:
+        print("\nBreakdown by matrix type:")
+        for mt in sorted(matrix_types):
+            mt_results = [r for r in summary.results if r.matrix_type == mt]
+            non_unif = sum(not r.is_uniform for r in mt_results)
+            non_pos = sum(not r.is_positroid for r in mt_results)
+            print(
+                f"  {mt:>25}: {len(mt_results):>5} trials, "
+                f"{non_unif:>4} non-uniform, "
+                f"{non_pos:>4} non-positroid"
+            )
+
 
 def print_detailed(summary: SearchSummary) -> None:
     """Print detailed results for all non-uniform matroids."""
@@ -495,7 +579,8 @@ def print_detailed(summary: SearchSummary) -> None:
         status = "COUNTEREXAMPLE" if r.is_counterexample else "positroid"
         print(
             f"\n--- [{status}] d={r.input_dim}, H={r.hidden_dim}, "
-            f"kernel={r.tp_kernel}, strategy={r.strategy} ---"
+            f"kernel={r.tp_kernel}, strategy={r.strategy}, "
+            f"matrix={r.matrix_type} ---"
         )
         print(f"  TP weight: {r.is_weight_tp}")
         print(f"  Positroid: {r.is_positroid}")
@@ -531,6 +616,13 @@ def main() -> None:
         default=["exponential", "cauchy"],
         choices=["exponential", "cauchy"],
     )
+    parser.add_argument(
+        "--non-tp-kernels",
+        nargs="+",
+        default=None,
+        choices=["sinusoidal", "quadratic_distance"],
+        help="Non-TP kernels to also test (comparative search)",
+    )
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--detailed", action="store_true")
     args = parser.parse_args()
@@ -542,6 +634,8 @@ def main() -> None:
     print(f"Matrices per config per kernel: {args.num_matrices}")
     print(f"Strategies: {args.strategies}")
     print(f"Kernels: {args.kernels}")
+    if args.non_tp_kernels:
+        print(f"Non-TP kernels: {args.non_tp_kernels}")
 
     summary = run_counterexample_search(
         configs=[(d, h) for d, h in configs],
@@ -550,6 +644,7 @@ def main() -> None:
         num_random_trials=args.num_random,
         seed=args.seed,
         kernels=args.kernels,
+        non_tp_kernels=args.non_tp_kernels,
     )
 
     print_summary(summary)

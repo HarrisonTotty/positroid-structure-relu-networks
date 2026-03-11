@@ -1,9 +1,11 @@
 # Positroid Structure in ReLU Networks
 
-Experiment code for two blog posts investigating the combinatorial geometry of trained ReLU networks:
+Experiment code for a series of blog posts investigating the combinatorial geometry of trained neural networks:
 
-1. [The Hidden Geometry of ReLU Networks](https://harrison.totty.dev/p/hidden-geometry-relu-networks)
-2. [Positroid Structure in ReLU Networks](https://harrison.totty.dev/p/positroid-structure-relu-networks)
+1. [Positroid Structure in ReLU Networks](https://harrison.totty.dev/p/positroid-structure-relu-networks)
+2. [The Hidden Geometry of ReLU Networks](https://harrison.totty.dev/p/hidden-geometry-relu-networks)
+3. [Matroid-Guided Pruning: Removing 70% of Neurons for Free](https://harrison.totty.dev/p/matroid-guided-pruning)
+4. [Chasing Geometric Structure in Transformers](https://harrison.totty.dev/p/chasing-geometric-structure-in-transformers)
 
 ## What this is about
 
@@ -17,6 +19,10 @@ Positroids are a special class of matroids arising from totally nonnegative matr
 
 **Theorem (Contiguous-Implies-Positroid):** We prove that if every non-basis of a rank-$k$ matroid on $[n]$ is a cyclic interval $\{j, j{+}1, \ldots, j{+}k{-}1\} \bmod n$, then the matroid is a positroid. This cleanly explains the dichotomy: trained networks only produce cyclic-interval non-bases, while counterexamples require "spread" patterns.
 
+**Pruning application:** The matroid structure tells us which neurons are essential (appear in every basis) vs. tail (never in any basis). Tail neurons can be removed for free — zero accuracy loss. Combining this with importance scoring yields a matroid-guided pruning strategy that removes 70% of neurons while preserving accuracy.
+
+**Transformer extension:** We investigate whether positroid structure extends to transformer attention and MLP layers, using positroid-constrained attention (via Plücker coordinates), tropical MLP (determinant nonlinearity from boundary measurement), and positroid LoRA. The results are mostly negative — positroid constraints don't help transformers — but analysis of pretrained GPT-2 weights reveals approximate total positivity in early layers.
+
 ## Setup
 
 Requires Python 3.14+ and [uv](https://docs.astral.sh/uv/).
@@ -29,7 +35,9 @@ uv sync --all-extras
 
 Each experiment can be run via `just` or directly with `uv run python -m positroid.experiments.<name>`.
 
-### Activation positroid (baseline)
+### Posts 1 & 2: Positroid structure in ReLU networks
+
+#### Activation positroid (baseline)
 
 Random TP weights + random biases. Shows that random biases mostly produce uniform (trivially positroid) matroids.
 
@@ -45,7 +53,7 @@ just experiment-positroid [ARGS]
 | `--seed` | `42` | Random seed |
 | `--detailed` | off | Print per-trial details for non-positroid cases |
 
-### Trained network positroid
+#### Trained network positroid
 
 Trains networks on real data with both TP-constrained and unconstrained weights, then checks positroid structure.
 
@@ -67,9 +75,9 @@ just experiment-trained-positroid-digits [ARGS]
 | `--track-evolution` | off | Record matroid structure at snapshots during training |
 | `--detailed` | off | Print per-trial details for non-uniform/non-positroid cases |
 
-Available datasets: `moons`, `circles`, `spirals`, `xor`, `digits_0v1_pca2`, `digits_0v1_pca3`, `digits_0v1_pca5`, `digits_0v1_pca10`, `digits_3v8_pca2`, `digits_3v8_pca3`, `digits_3v8_pca5`, `digits_3v8_pca10`.
+Available datasets: `moons`, `circles`, `spirals`, `xor`, `digits_0v1_pca2`, `digits_0v1_pca3`, `digits_0v1_pca5`, `digits_0v1_pca10`, `digits_3v8_pca2`, `digits_3v8_pca3`, `digits_3v8_pca5`, `digits_3v8_pca10`, `mnist_pca10`, `mnist_pca20`, `mnist_pca50`.
 
-### Counterexample search
+#### Counterexample search
 
 Constructs TP weight matrices and deliberately chooses biases to produce non-positroid affine matroids.
 
@@ -87,10 +95,77 @@ just experiment-counterexample [ARGS]
 | `--seed` | `42` | Random seed |
 | `--detailed` | off | Print details for all non-uniform matroids |
 
+#### Supporting experiments
+
+```bash
+# TP vs non-TP weight comparison across 8 parameterization modes
+uv run python -m positroid.experiments.non_tp_baseline
+
+# Epoch-by-epoch matroid evolution during training
+uv run python -m positroid.experiments.matroid_evolution
+
+# Rank-deficiency support analysis at scale
+uv run python -m positroid.experiments.scale_evolution
+
+# Multi-hidden-layer positroid analysis
+uv run python -m positroid.experiments.multilayer
+
+# MNIST multiclass classification
+uv run python -m positroid.experiments.mnist_experiment
+
+# Diagnose CREATED (non-positroid) cases
+uv run python -m positroid.experiments.diagnose_created
+```
+
+### Post 3: Matroid-guided pruning
+
+```bash
+# 6 pruning strategies: matroid-guided, random, magnitude, activation, sensitivity, direction_replacement
+uv run python -m positroid.experiments.pruning
+```
+
+### Post 4: Transformer experiments
+
+```bash
+# Positroid vs standard attention comparison
+uv run python -m positroid.experiments.transformer_experiment
+
+# Tropical MLP ablation (5 MLP variants)
+uv run python -m positroid.experiments.tropical_mlp_ablation
+
+# Optimization gap diagnosis (gradient norm tracking)
+uv run python -m positroid.experiments.optimization_diagnosis
+
+# Positroid cell network experiments (det/plucker_ratio/canonical_residue readouts)
+uv run python -m positroid.experiments.positroid_network_experiment
+
+# GPT-2 attention positroid analysis (requires torch, transformers)
+uv run python -m positroid.experiments.attention_positroid
+
+# GPT-2 weight matrix analysis (requires torch, transformers)
+uv run python -m positroid.experiments.pretrained_analysis
+```
+
+### Figure generation
+
+```bash
+# Figures for posts 1 & 2
+uv run python scripts/generate_blog_figures.py
+
+# Figures for post 3 (pruning)
+uv run python scripts/generate_pruning_figures.py
+
+# Figures for post 4 (transformers)
+uv run python scripts/generate_transformer_figures.py
+
+# Pruning comparison animation (requires manim)
+uv run python scripts/pruning_animation.py
+```
+
 ## Running tests
 
 ```bash
-just test            # 176 tests
+just test            # 466 tests
 just coverage        # with coverage report
 just check           # lint + typecheck + test
 ```
@@ -100,14 +175,19 @@ just check           # lint + typecheck + test
 ```
 src/positroid/
 ├── linalg/          # Minors, totally positive matrix construction & verification
-├── matroid/         # Matroid, linear matroid (SVD-based), positroid (Grassmann necklace)
+├── matroid/         # Matroid, linear matroid, positroid (Grassmann necklace), plabic graphs
 ├── arrangement/     # Hyperplane arrangements and their affine matroids
-├── network/         # ReLU networks, TP-constrained networks, training loop
-├── datasets/        # 2D toy datasets (moons, circles, spirals, XOR) and PCA-reduced digits
-└── experiments/     # The three main experiments described above
+├── network/         # ReLU networks, TP-constrained networks, positroid cell networks
+├── positroid_cell/  # Boundary measurement (Marsh-Rietsch), Plücker coordinates
+├── transformer/     # Positroid attention, tropical MLP, det MLP, LoRA, MoE, analysis
+├── datasets/        # Toy 2D, PCA-reduced digits, MNIST
+└── experiments/     # All experiments described above
 
 scripts/
-└── generate_blog_figures.py   # Generates all figures used in the blog posts
+├── generate_blog_figures.py        # Figures for posts 1 & 2
+├── generate_pruning_figures.py     # Figures for post 3
+├── generate_transformer_figures.py # Figures for post 4
+└── pruning_animation.py            # Manim animation for pruning comparison
 ```
 
 ## License

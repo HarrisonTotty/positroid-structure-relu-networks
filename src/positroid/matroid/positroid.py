@@ -152,6 +152,44 @@ def has_only_cyclic_interval_nonbases(matroid: Matroid) -> bool:
     return all(is_cyclic_interval(nb, n) for nb in non_bases)
 
 
+def nonbase_support(matroid: Matroid) -> frozenset[int]:
+    """Union of all elements appearing in any non-basis.
+
+    Returns frozenset() for uniform matroids (no non-bases).
+    """
+    n = matroid.size
+    k = matroid.rank
+    all_k_subsets = frozenset(frozenset(s) for s in combinations(range(n), k))
+    non_bases = all_k_subsets - matroid.bases
+    if not non_bases:
+        return frozenset()
+    return frozenset().union(*non_bases)
+
+
+def support_is_cyclic_interval(matroid: Matroid) -> bool:
+    """Check if the non-basis support forms a cyclic interval.
+
+    Returns True for uniform matroids (empty support is trivially an interval).
+    """
+    support = nonbase_support(matroid)
+    if not support:
+        return True
+    return is_cyclic_interval(support, matroid.size)
+
+
+def support_rank_deficiency(matroid: Matroid) -> int:
+    """Rank deficiency of the non-basis support: k - rank(support).
+
+    Returns 0 for uniform matroids. Positive means the support is
+    rank-deficient, which is the key condition in the Contiguous-Support
+    Positroid Theorem.
+    """
+    support = nonbase_support(matroid)
+    if not support:
+        return 0
+    return matroid.rank - matroid.rank_of(support)
+
+
 def decorated_permutation(necklace: tuple[frozenset[int], ...], n: int) -> list[int | None]:
     """Compute the decorated permutation from a Grassmann necklace.
 

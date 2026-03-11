@@ -352,7 +352,7 @@ def main() -> None:
     parser.add_argument(
         "--tp-kernel",
         default="exponential",
-        choices=["exponential", "cauchy"],
+        choices=["exponential", "cauchy", "loewner_whitney"],
     )
     args = parser.parse_args()
 

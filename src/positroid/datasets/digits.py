@@ -127,3 +127,70 @@ _DEFAULT_CONFIGS: list[tuple[int, int, int]] = [
 
 for _da, _db, _pd in _DEFAULT_CONFIGS:
     register_digits_dataset(_da, _db, _pd)
+
+
+# ── Multiclass (10-class) digits ──
+
+# Cache: (pca_dim, digits_tuple) -> (X_projected, y_labels)
+_mc_cache: dict[tuple[int, tuple[int, ...]], tuple[np.ndarray, np.ndarray]] = {}
+
+
+def _load_and_project_multiclass(
+    pca_dim: int,
+    digits: tuple[int, ...] = (0, 1, 2, 3, 4, 5, 6, 7, 8, 9),
+) -> tuple[np.ndarray, np.ndarray]:
+    """Load all requested digit classes, PCA-project, standardize, cache."""
+    key = (pca_dim, digits)
+    if key in _mc_cache:
+        return _mc_cache[key]
+
+    from sklearn.datasets import load_digits
+
+    data = load_digits()
+    x_all, y_all = data.data, data.target
+
+    mask = np.isin(y_all, digits)
+    x_sel = x_all[mask].astype(np.float64)
+    y_sel = y_all[mask].astype(np.int64)
+
+    # Remap labels to contiguous 0..C-1
+    label_map = {d: i for i, d in enumerate(sorted(digits))}
+    y_mapped = np.array([label_map[int(yi)] for yi in y_sel], dtype=np.int64)
+
+    x_projected, _, _ = _pca_project(x_sel, pca_dim)
+
+    std = x_projected.std(axis=0)
+    std[std < 1e-10] = 1.0
+    x_projected = x_projected / std
+
+    _mc_cache[key] = (x_projected, y_mapped)
+    return x_projected, y_mapped
+
+
+def make_digits_multiclass(
+    n_samples: int = 1000,
+    rng: np.random.Generator | None = None,
+    *,
+    pca_dim: int = 20,
+    digits: tuple[int, ...] = (0, 1, 2, 3, 4, 5, 6, 7, 8, 9),
+) -> tuple[np.ndarray, np.ndarray]:
+    """PCA-reduced multiclass digit dataset.
+
+    Returns (X, y) where y contains integer class labels 0..C-1.
+    """
+    if rng is None:
+        rng = np.random.default_rng()
+
+    x_full, y_full = _load_and_project_multiclass(pca_dim, digits)
+    n_available = x_full.shape[0]
+
+    replace = n_samples > n_available
+    indices = rng.choice(n_available, size=n_samples, replace=replace)
+
+    return x_full[indices].copy(), y_full[indices].copy()
+
+
+# Register default multiclass configs
+for _pca in [10, 20, 50]:
+    _name = f"digits_10class_pca{_pca}"
+    DIGIT_DATASETS[_name] = partial(make_digits_multiclass, pca_dim=_pca)

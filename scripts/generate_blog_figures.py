@@ -163,10 +163,10 @@ def _draw_circle_nodes(
         gaps = [(elems[(i + 1) % len(elems)] - elems[i]) % n
                 for i in range(len(elems))]
         if all(g == 1 for g in gaps[:-1]):
-            start_angle = 90 - start_idx * (360 / n) + (360 / n) * 0.3
-            end_angle = 90 - end_idx * (360 / n) - (360 / n) * 0.3
+            start_angle = 90 - start_idx * (360 / n) + (360 / n) * 0.1
+            end_angle = 90 - end_idx * (360 / n) - (360 / n) * 0.1
             arc = Arc(
-                (0, 0), 2 * radius * 0.85, 2 * radius * 0.85,
+                (0, 0), 2 * radius, 2 * radius,
                 angle=0, theta1=end_angle, theta2=start_angle,
                 color=highlight_color, linewidth=6, alpha=0.3,
             )

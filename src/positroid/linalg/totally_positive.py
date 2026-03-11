@@ -55,6 +55,56 @@ def tp_from_cauchy_kernel(a: np.ndarray, b: np.ndarray) -> np.ndarray:
     return result
 
 
+def tp_from_loewner_whitney(
+    diag: np.ndarray,
+    upper: np.ndarray,
+    lower: np.ndarray,
+    n_rows: int,
+    n_cols: int,
+) -> np.ndarray:
+    """Build n_rows×n_cols TP matrix from Loewner-Whitney bidiagonal factorization.
+
+    Uses three stages (all parameters strictly positive):
+
+    1. Positive diagonal: n_cols params
+    2. Upper bidiagonal (wiring diagram order): n_cols*(n_cols-1)/2 params
+       Fills the upper triangle of the n_cols×n_cols block.
+    3. Lower bidiagonal (Neville order): n_cols*(2*n_rows-n_cols-1)/2 params
+       Fills the lower triangle and extends to n_rows rows.
+
+    Total: n_rows * n_cols parameters.
+
+    Args:
+        diag: Positive 1D array of length n_cols.
+        upper: Positive 1D array of length n_cols*(n_cols-1)//2.
+        lower: Positive 1D array of length n_cols*(2*n_rows-n_cols-1)//2.
+        n_rows: Number of rows (hidden dim).
+        n_cols: Number of columns (input dim).
+
+    Returns:
+        n_rows×n_cols totally positive matrix.
+    """
+    a = np.zeros((n_rows, n_cols))
+    # 1. Positive diagonal
+    for i in range(n_cols):
+        a[i, i] = diag[i]
+    # 2. Upper bidiagonal (wiring diagram order):
+    #    Level l (l=1..d-1): for k=d-l..d-1: a[k-1] += u * a[k]
+    idx = 0
+    for level in range(1, n_cols):
+        for k in range(n_cols - level, n_cols):
+            a[k - 1, :] += upper[idx] * a[k, :]
+            idx += 1
+    # 3. Lower bidiagonal (Neville order):
+    #    For j=d-1..0: for i=j+1..H-1: a[i] += l * a[i-1]
+    idx = 0
+    for j in range(n_cols - 1, -1, -1):
+        for i in range(j + 1, n_rows):
+            a[i, :] += lower[idx] * a[i - 1, :]
+            idx += 1
+    return a
+
+
 def random_totally_positive(m: int, n: int, rng: np.random.Generator | None = None) -> np.ndarray:
     """Generate a random totally positive m x n matrix.
 

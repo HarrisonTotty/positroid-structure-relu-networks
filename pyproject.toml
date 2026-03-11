@@ -44,6 +44,26 @@ mypy_path = "src"
 module = "sklearn.*"
 ignore_missing_imports = true
 
+[[tool.mypy.overrides]]
+module = "torch.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "transformers.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "huggingface_hub.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "safetensors.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "manim.*"
+ignore_missing_imports = true
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-v --tb=short"
