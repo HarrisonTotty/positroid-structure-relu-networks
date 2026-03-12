@@ -54,11 +54,11 @@ experiment-counterexample *ARGS:
 
 # Build paper 1 (positroid structure)
 paper1:
-    cd papers/1-positroid-structure && pdflatex -interaction=nonstopmode main.tex && pdflatex -interaction=nonstopmode main.tex
+    cd papers/1-positroid-structure && pdflatex -interaction=nonstopmode -jobname=positroid-structure-relu-networks main.tex && pdflatex -interaction=nonstopmode -jobname=positroid-structure-relu-networks main.tex
 
 # Build all papers
 papers: paper1
 
 # Clean paper build artifacts
 papers-clean:
-    cd papers/1-positroid-structure && rm -f main.aux main.log main.out main.bbl main.blg
+    cd papers/1-positroid-structure && rm -f positroid-structure-relu-networks.{aux,log,out,bbl,blg}
